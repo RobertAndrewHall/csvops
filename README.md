@@ -88,28 +88,45 @@ The codebase follows a DDD-lite layered structure:
 
 ## Domain model
 
-The core domain is "extract values from one selected CSV column with safe interactive controls."
+Bounded context: `Column Extraction`.
 
-- `ExtractionSession` (aggregate root): owns extraction workflow state and decisions.
-- `CsvSource`: source file path plus separator.
-- `ColumnSelection`: selected header/column name.
-- `ExtractionOptions`: extraction behavior (`skip_blanks`, `preview_limit`).
-- `Preview`: first `N` extracted values shown before execution.
-- `OutputDestination`: destination decision (`console` or `file(path)`).
-- `ExtractionValue`: normalized extracted value object.
+Core DDD structure:
+
+- Aggregate root: `ExtractionSession`
+  - Controls extraction state transitions (`start`, `with_preview`, `confirm!`, `with_output_destination`).
+  - Enforces session-level invariants.
+- Entities:
+  - `CsvSource` (file path + `Separator`)
+  - `ColumnSelection` (chosen header)
+- Value objects:
+  - `Separator`
+  - `ExtractionOptions` (`skip_blanks`, `preview_limit`)
+  - `Preview` (list of `ExtractionValue`)
+  - `ExtractionValue`
+  - `OutputDestination` (`console` or `file(path)`)
+- Application service:
+  - `Application::UseCases::RunExtraction` orchestrates one extraction request.
+- Infrastructure adapters:
+  - `Infrastructure::CSV::HeaderReader`
+  - `Infrastructure::CSV::ValueStreamer`
+  - `Infrastructure::Output::ConsoleWriter`
+  - `Infrastructure::Output::CsvFileWriter`
+- Interface adapters:
+  - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Prompts::*`
+  - `Interface::CLI::Errors::Presenter`
 
 ```mermaid
-flowchart TD
-  A["CsvSource (path + separator)"] --> B["HeaderSet"]
-  B --> C["ColumnSelection"]
-  C --> D["ExtractionOptions (skip_blanks)"]
-  D --> E["ValueStream (row-by-row)"]
-  E --> F["Preview (first N values)"]
-  F --> G{"Confirm extraction?"}
-  G -->|"No"| H["Cancel + return to menu"]
-  G -->|"Yes"| I["OutputDestination"]
-  I -->|"Console"| J["Console output (stream values)"]
-  I -->|"File"| K["CSV file output (header + one value per row)"]
+flowchart LR
+  UI["Interface CLI\n(Menu + Prompts + Errors)"] --> APP["Application Use Case\nRunExtraction"]
+  APP --> AGG["Domain Aggregate\nExtractionSession"]
+
+  AGG --> E1["Entity\nCsvSource"]
+  AGG --> E2["Entity\nColumnSelection"]
+  AGG --> V1["Value Objects\nSeparator / ExtractionOptions / Preview / OutputDestination / ExtractionValue"]
+
+  APP --> INFCSV["Infrastructure CSV\nHeaderReader + ValueStreamer"]
+  APP --> INFOUT["Infrastructure Output\nConsoleWriter + CsvFileWriter"]
 ```
 
 ## Project layout
