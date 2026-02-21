@@ -180,6 +180,7 @@ class TestCli < Minitest::Test
     input = [
       "3",
       fixture_path("sample_people.csv"),
+      "",
       "4"
     ].join("\n") + "\n"
 
@@ -190,6 +191,29 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Alice,London"
     assert_includes output.string, "Bob,Paris"
     assert_includes output.string, "Cara,Berlin"
+  end
+
+  def test_randomize_rows_workflow_can_write_to_file
+    output = StringIO.new
+
+    Dir.mktmpdir do |dir|
+      output_path = File.join(dir, "randomized_rows.csv")
+      input = [
+        "3",
+        fixture_path("sample_people.csv"),
+        "2",
+        output_path,
+        "4"
+      ].join("\n") + "\n"
+
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+      assert_equal 0, status
+      assert_includes output.string, "Wrote output to #{output_path}"
+      lines = File.read(output_path).lines.map(&:strip)
+      assert_equal "name,city", lines.first
+      assert_equal ["Alice,London", "Bob,Paris", "Cara,Berlin"].sort, lines[1..].sort
+    end
   end
 
   def test_end_to_end_file_output_writes_expected_csv

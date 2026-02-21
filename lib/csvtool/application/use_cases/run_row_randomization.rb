@@ -3,6 +3,7 @@
 require "csv"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_randomizer"
 
@@ -25,13 +26,39 @@ module Csvtool
           return @errors.no_headers if headers.empty?
 
           rows = @row_randomizer.call(file_path: file_path, col_sep: ",")
-          @stdout.puts
-          @stdout.puts ::CSV.generate_line(headers, row_sep: "").chomp
-          rows.each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "").chomp }
+          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
+            stdin: @stdin,
+            stdout: @stdout,
+            errors: @errors
+          ).call
+          return if output_destination.nil?
+
+          if output_destination[:mode] == :file
+            write_output_file(output_destination[:path], headers, rows)
+          else
+            print_to_console(headers, rows)
+          end
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
         rescue Errno::EACCES
           @errors.cannot_read_file(file_path)
+        end
+
+        private
+
+        def print_to_console(headers, rows)
+          @stdout.puts
+          @stdout.puts ::CSV.generate_line(headers, row_sep: "").chomp
+          rows.each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "").chomp }
+        end
+
+        def write_output_file(path, headers, rows)
+          ::CSV.open(path, "w", write_headers: true, headers: headers) do |csv|
+            rows.each { |fields| csv << fields }
+          end
+          @stdout.puts "Wrote output to #{path}"
+        rescue Errno::EACCES, Errno::ENOENT => e
+          @errors.cannot_write_output_file(path, e.class)
         end
       end
     end
