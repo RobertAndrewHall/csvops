@@ -6,6 +6,9 @@ require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
+require "csvtool/infrastructure/csv/row_streamer"
+require "csvtool/infrastructure/output/csv_row_console_writer"
+require "csvtool/infrastructure/output/csv_row_file_writer"
 require "csvtool/domain/row_range_session/row_range"
 require "csvtool/domain/row_range_session/row_source"
 require "csvtool/domain/row_range_session/output_destination"
@@ -20,6 +23,7 @@ module Csvtool
           @stdout = stdout
           @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
           @header_reader = Infrastructure::CSV::HeaderReader.new
+          @row_streamer = Infrastructure::CSV::RowStreamer.new
         end
 
         def call
@@ -58,8 +62,13 @@ module Csvtool
             end
           session = session.with_output_destination(destination)
 
+          stats =
           if session.output_destination.file?
-            write_to_file(
+            Infrastructure::Output::CsvRowFileWriter.new(
+              stdout: @stdout,
+              errors: @errors,
+              row_streamer: @row_streamer
+            ).call(
               output_path: session.output_destination.path,
               file_path: session.source.path,
               col_sep: session.source.separator,
@@ -68,7 +77,7 @@ module Csvtool
               end_row: session.row_range.end_row
             )
           else
-            write_to_console(
+            Infrastructure::Output::CsvRowConsoleWriter.new(stdout: @stdout, row_streamer: @row_streamer).call(
               file_path: session.source.path,
               col_sep: session.source.separator,
               headers: headers,
@@ -76,6 +85,9 @@ module Csvtool
               end_row: session.row_range.end_row
             )
           end
+          return if stats.nil?
+
+          @errors.row_range_out_of_bounds(stats[:row_count]) unless stats[:matched]
         rescue Domain::RowRangeSession::InvalidStartRowError
           @errors.invalid_start_row
         rescue Domain::RowRangeSession::InvalidEndRowError
@@ -93,47 +105,6 @@ module Csvtool
         end
         
         private
-
-        def write_to_console(file_path:, col_sep:, headers:, start_row:, end_row:)
-          wrote_rows = false
-          row_index = 0
-          CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
-            row_index += 1
-            next if row_index < start_row
-            break if row_index > end_row
-
-            unless wrote_rows
-              @stdout.puts CSV.generate_line(headers, row_sep: "").chomp
-              wrote_rows = true
-            end
-            @stdout.puts CSV.generate_line(row.fields, row_sep: "").chomp
-          end
-
-          @errors.row_range_out_of_bounds(row_index) unless wrote_rows
-        end
-
-        def write_to_file(output_path:, file_path:, col_sep:, headers:, start_row:, end_row:)
-          row_index = 0
-          wrote_rows = false
-          CSV.open(output_path, "w") do |csv|
-            CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
-              row_index += 1
-              next if row_index < start_row
-              break if row_index > end_row
-
-              unless wrote_rows
-                csv << headers
-                wrote_rows = true
-              end
-              csv << row.fields
-            end
-          end
-          return @errors.row_range_out_of_bounds(row_index) unless wrote_rows
-
-          @stdout.puts "Wrote output to #{output_path}"
-        rescue Errno::EACCES, Errno::ENOENT => e
-          @errors.cannot_write_output_file(output_path, e.class)
-        end
       end
     end
   end
