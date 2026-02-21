@@ -42,7 +42,9 @@ class CliUnitTest < Minitest::Test
     input = ["3", fixture, "4"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
-    assert_includes stdout.string, "Randomize rows workflow selected for: #{fixture}"
-    assert_includes stdout.string, "Row randomization implementation is next."
+    assert_includes stdout.string, "name,city"
+    assert_includes stdout.string, "Alice,London"
+    assert_includes stdout.string, "Bob,Paris"
+    assert_includes stdout.string, "Cara,Berlin"
   end
 end

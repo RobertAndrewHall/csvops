@@ -175,6 +175,23 @@ class TestCli < Minitest::Test
     refute_includes output.string, "Could not parse CSV file."
   end
 
+  def test_randomize_rows_workflow_prints_header_and_all_data_rows
+    output = StringIO.new
+    input = [
+      "3",
+      fixture_path("sample_people.csv"),
+      "4"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "name,city"
+    assert_includes output.string, "Alice,London"
+    assert_includes output.string, "Bob,Paris"
+    assert_includes output.string, "Cara,Berlin"
+  end
+
   def test_end_to_end_file_output_writes_expected_csv
     output = StringIO.new
     output_path = nil
