@@ -143,17 +143,17 @@ Release runbook:
 
 The codebase follows a DDD-lite layered structure:
 
-- `domain/`: core domain model and invariants (`ColumnSession` aggregate + value objects/entities).
-- `application/`: use-case orchestration (`RunExtraction`).
+- `domain/`: core domain models and invariants (`ColumnSession` and `RowSession` aggregates + supporting entities/value objects).
+- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`).
 - `infrastructure/`: CSV reading/streaming and output adapters (console/file).
 - `interface/cli/`: menu, prompts, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
 ## Domain model
 
-Bounded context: `Column Extraction`.
+Bounded contexts: `Column Extraction` and `Row Extraction`.
 
-Core DDD structure:
+### Column Extraction
 
 - Aggregate root: `ColumnSession`
   - Controls extraction state transitions (`start`, `with_preview`, `confirm!`, `with_output_destination`).
@@ -192,13 +192,51 @@ flowchart LR
   APP --> INFOUT["Infrastructure Output\nConsoleWriter + CsvFileWriter"]
 ```
 
+### Row Extraction
+
+Core DDD structure:
+
+- Aggregate root: `RowSession`
+  - Captures one row-range extraction request.
+  - Holds selected source, requested range, and output destination.
+- Entity:
+  - `RowSource` (file path + separator)
+- Value objects:
+  - `RowRange` (`start_row`, `end_row`) plus row-range validation errors
+  - `RowOutputDestination` (`console` or `file(path)`)
+- Application service:
+  - `Application::UseCases::RunRowExtraction` orchestrates row-range extraction.
+- Infrastructure adapters:
+  - `Infrastructure::CSV::HeaderReader`
+  - `Infrastructure::CSV::RowStreamer`
+  - `Infrastructure::Output::CsvRowConsoleWriter`
+  - `Infrastructure::Output::CsvRowFileWriter`
+- Interface adapters:
+  - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Prompts::*`
+  - `Interface::CLI::Errors::Presenter`
+
+```mermaid
+flowchart LR
+  UI2["Interface CLI\n(Menu + Prompts + Errors)"] --> APP2["Application Use Case\nRunRowExtraction"]
+  APP2 --> AGG2["Domain Aggregate\nRowSession"]
+
+  AGG2 --> E3["Entity\nRowSource"]
+  AGG2 --> V2["Value Objects\nRowRange / RowOutputDestination"]
+
+  APP2 --> INFCSV2["Infrastructure CSV\nHeaderReader + RowStreamer"]
+  APP2 --> INFOUT2["Infrastructure Output\nCsvRowConsoleWriter + CsvRowFileWriter"]
+```
+
 ## Project layout
 
 ```text
 bin/tool              # CLI entrypoint
 lib/csvtool/cli.rb
 lib/csvtool/domain/column_session/*
+lib/csvtool/domain/row_session/*
 lib/csvtool/application/use_cases/run_extraction.rb
+lib/csvtool/application/use_cases/run_row_extraction.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/interface/cli/menu_loop.rb
