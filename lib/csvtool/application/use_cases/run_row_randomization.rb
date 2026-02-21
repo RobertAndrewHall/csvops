@@ -3,6 +3,8 @@
 require "csv"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_randomizer"
@@ -22,10 +24,15 @@ module Csvtool
         def call
           file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
           return @errors.file_not_found(file_path) unless File.file?(file_path)
-          headers = @header_reader.call(file_path: file_path, col_sep: ",")
-          return @errors.no_headers if headers.empty?
 
-          rows = @row_randomizer.call(file_path: file_path, col_sep: ",")
+          col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+          return if col_sep.nil?
+
+          headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout).call
+          headers = headers_present ? @header_reader.call(file_path: file_path, col_sep: col_sep) : nil
+          return @errors.no_headers if headers_present && headers.empty?
+
+          rows = @row_randomizer.call(file_path: file_path, col_sep: col_sep, headers: headers_present)
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
             stdin: @stdin,
             stdout: @stdout,
@@ -34,9 +41,9 @@ module Csvtool
           return if output_destination.nil?
 
           if output_destination[:mode] == :file
-            write_output_file(output_destination[:path], headers, rows)
+            write_output_file(output_destination[:path], headers, rows, col_sep: col_sep)
           else
-            print_to_console(headers, rows)
+            print_to_console(headers, rows, col_sep: col_sep)
           end
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
@@ -46,14 +53,14 @@ module Csvtool
 
         private
 
-        def print_to_console(headers, rows)
+        def print_to_console(headers, rows, col_sep:)
           @stdout.puts
-          @stdout.puts ::CSV.generate_line(headers, row_sep: "").chomp
-          rows.each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "").chomp }
+          @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: col_sep).chomp if headers
+          rows.each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: col_sep).chomp }
         end
 
-        def write_output_file(path, headers, rows)
-          ::CSV.open(path, "w", write_headers: true, headers: headers) do |csv|
+        def write_output_file(path, headers, rows, col_sep:)
+          ::CSV.open(path, "w", write_headers: !headers.nil?, headers: headers, col_sep: col_sep) do |csv|
             rows.each { |fields| csv << fields }
           end
           @stdout.puts "Wrote output to #{path}"

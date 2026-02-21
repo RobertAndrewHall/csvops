@@ -10,11 +10,11 @@ module Csvtool
           @rng = rng
         end
 
-        def call(file_path:, col_sep:)
+        def call(file_path:, col_sep:, headers:)
           rows = []
 
-          ::CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
-            rows << row.fields
+          ::CSV.foreach(file_path, headers: headers, col_sep: col_sep) do |row|
+            rows << (headers ? row.fields : row)
           end
 
           randomized = rows.map { |fields| [@rng.rand, fields] }.sort_by(&:first).map(&:last)

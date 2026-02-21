@@ -181,6 +181,8 @@ class TestCli < Minitest::Test
       "3",
       fixture_path("sample_people.csv"),
       "",
+      "",
+      "",
       "4"
     ].join("\n") + "\n"
 
@@ -201,6 +203,8 @@ class TestCli < Minitest::Test
       input = [
         "3",
         fixture_path("sample_people.csv"),
+        "",
+        "",
         "2",
         output_path,
         "4"
@@ -214,6 +218,44 @@ class TestCli < Minitest::Test
       assert_equal "name,city", lines.first
       assert_equal ["Alice,London", "Bob,Paris", "Cara,Berlin"].sort, lines[1..].sort
     end
+  end
+
+  def test_randomize_rows_workflow_supports_tsv_separator
+    output = StringIO.new
+    input = [
+      "3",
+      fixture_path("sample_people.tsv"),
+      "2",
+      "",
+      "",
+      "4"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "name\tcity"
+    assert_includes output.string, "Alice\tLondon"
+  end
+
+  def test_randomize_rows_workflow_headerless_mode_randomizes_all_rows
+    output = StringIO.new
+    input = [
+      "3",
+      fixture_path("sample_people_no_headers.csv"),
+      "",
+      "n",
+      "",
+      "4"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    refute_includes output.string, "name,city"
+    assert_includes output.string, "Alice,London"
+    assert_includes output.string, "Bob,Paris"
+    assert_includes output.string, "Cara,Berlin"
   end
 
   def test_end_to_end_file_output_writes_expected_csv
