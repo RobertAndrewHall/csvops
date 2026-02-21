@@ -16,13 +16,13 @@ bundle install
 
 ## Usage
 
-Run the interactive menu:
+### 1. Start the CLI
 
 ```bash
 ./bin/tool menu
 ```
 
-You should see:
+### 2. Choose an action
 
 ```text
 CSV Tool Menu
@@ -31,7 +31,20 @@ CSV Tool Menu
 >
 ```
 
-Choose `1` to extract a column:
+Select `1` to run extraction.
+
+### 3. Follow prompts
+
+Prompt flow:
+
+- CSV file path
+- Separator (`comma`, `tab`, `semicolon`, `pipe`, or `custom`)
+- Optional header filter + column selection
+- Skip blanks (`Y/n`, default `Y`)
+- Preview + confirmation
+- Output destination (`console` or `file`)
+
+### 4. Example interaction (console output)
 
 ```text
 CSV file path: /path/to/file.csv
@@ -60,6 +73,17 @@ Output destination [1]: 1
 Alice
 Bob
 Cara
+```
+
+### 5. Example interaction (file output)
+
+```text
+Output destination:
+1. console
+2. file
+Output destination [1]: 2
+Output file path: /tmp/names.csv
+Wrote output to /tmp/names.csv
 ```
 
 ## Testing
