@@ -108,4 +108,33 @@ class RunRowRangeShellTest < Minitest::Test
       assert_includes out.string, "Wrote output to #{output_path}"
     end
   end
+
+  def test_stops_parsing_after_end_row_for_console_output
+    out = StringIO.new
+    fixture = File.expand_path("../../../fixtures/sample_people_bad_tail.csv", __dir__)
+    input = [fixture, "", "1", "2", ""].join("\n") + "\n"
+
+    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case.call
+
+    assert_includes out.string, "name,city"
+    assert_includes out.string, "Alice,London"
+    assert_includes out.string, "Bob,Paris"
+    refute_includes out.string, "Could not parse CSV file."
+  end
+
+  def test_out_of_bounds_file_mode_reports_error
+    out = StringIO.new
+    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
+
+    Dir.mktmpdir do |dir|
+      output_path = File.join(dir, "rows.csv")
+      input = [fixture, "", "10", "12", "2", output_path].join("\n") + "\n"
+
+      use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+      use_case.call
+    end
+
+    assert_includes out.string, "Row range is out of bounds. File has 3 data rows."
+  end
 end

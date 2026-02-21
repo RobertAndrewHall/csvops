@@ -155,6 +155,26 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Wrote output to #{output_path}"
   end
 
+  def test_row_range_workflow_stops_before_malformed_tail
+    output = StringIO.new
+    input = [
+      "2",
+      fixture_path("sample_people_bad_tail.csv"),
+      "",
+      "1",
+      "2",
+      "",
+      "3"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "Alice,London"
+    assert_includes output.string, "Bob,Paris"
+    refute_includes output.string, "Could not parse CSV file."
+  end
+
   def test_end_to_end_file_output_writes_expected_csv
     output = StringIO.new
     output_path = nil

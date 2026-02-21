@@ -36,18 +36,6 @@ module Csvtool
           start_row, end_row = parse_and_validate_range(start_row_input, end_row_input)
           return if start_row.nil?
 
-          selected_rows = []
-          row_index = 0
-          CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
-            row_index += 1
-            next if row_index < start_row
-            break if row_index > end_row
-
-            selected_rows << row.fields
-          end
-
-          return @errors.row_range_out_of_bounds(row_index) if row_index < start_row
-
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
             stdin: @stdin,
             stdout: @stdout,
@@ -56,9 +44,22 @@ module Csvtool
           return if output_destination.nil?
 
           if output_destination[:mode] == :file
-            write_to_file(output_destination[:path], headers, selected_rows)
+            write_to_file(
+              output_path: output_destination[:path],
+              file_path: file_path,
+              col_sep: col_sep,
+              headers: headers,
+              start_row: start_row,
+              end_row: end_row
+            )
           else
-            write_to_console(headers, selected_rows)
+            write_to_console(
+              file_path: file_path,
+              col_sep: col_sep,
+              headers: headers,
+              start_row: start_row,
+              end_row: end_row
+            )
           end
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
@@ -92,18 +93,42 @@ module Csvtool
           /\A[1-9]\d*\z/.match?(value)
         end
 
-        def write_to_console(headers, rows)
-          @stdout.puts CSV.generate_line(headers, row_sep: "").chomp
-          rows.each do |fields|
-            @stdout.puts CSV.generate_line(fields, row_sep: "").chomp
+        def write_to_console(file_path:, col_sep:, headers:, start_row:, end_row:)
+          wrote_rows = false
+          row_index = 0
+          CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
+            row_index += 1
+            next if row_index < start_row
+            break if row_index > end_row
+
+            unless wrote_rows
+              @stdout.puts CSV.generate_line(headers, row_sep: "").chomp
+              wrote_rows = true
+            end
+            @stdout.puts CSV.generate_line(row.fields, row_sep: "").chomp
           end
+
+          @errors.row_range_out_of_bounds(row_index) unless wrote_rows
         end
 
-        def write_to_file(output_path, headers, rows)
+        def write_to_file(output_path:, file_path:, col_sep:, headers:, start_row:, end_row:)
+          row_index = 0
+          wrote_rows = false
           CSV.open(output_path, "w") do |csv|
-            csv << headers
-            rows.each { |fields| csv << fields }
+            CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
+              row_index += 1
+              next if row_index < start_row
+              break if row_index > end_row
+
+              unless wrote_rows
+                csv << headers
+                wrote_rows = true
+              end
+              csv << row.fields
+            end
           end
+          return @errors.row_range_out_of_bounds(row_index) unless wrote_rows
+
           @stdout.puts "Wrote output to #{output_path}"
         rescue Errno::EACCES, Errno::ENOENT => e
           @errors.cannot_write_output_file(output_path, e.class)
