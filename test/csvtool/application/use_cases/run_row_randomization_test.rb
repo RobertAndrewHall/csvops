@@ -8,7 +8,7 @@ class RunRowRandomizationTest < Minitest::Test
   def test_prints_header_then_all_randomized_rows
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
     output = StringIO.new
-    input = StringIO.new("#{fixture}\n\n\n\n")
+    input = StringIO.new("#{fixture}\n\n\n\n\n")
 
     Csvtool::Application::UseCases::RunRowRandomization.new(stdin: input, stdout: output).call
 
@@ -37,7 +37,7 @@ class RunRowRandomizationTest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       output_path = File.join(dir, "randomized.csv")
-      input = StringIO.new("#{fixture}\n\n\n2\n#{output_path}\n")
+      input = StringIO.new("#{fixture}\n\n\n\n2\n#{output_path}\n")
 
       Csvtool::Application::UseCases::RunRowRandomization.new(stdin: input, stdout: output).call
 
@@ -51,7 +51,7 @@ class RunRowRandomizationTest < Minitest::Test
   def test_supports_tsv_separator
     fixture = File.expand_path("../../../fixtures/sample_people.tsv", __dir__)
     output = StringIO.new
-    input = StringIO.new("#{fixture}\n2\n\n\n")
+    input = StringIO.new("#{fixture}\n2\n\n\n\n")
 
     Csvtool::Application::UseCases::RunRowRandomization.new(stdin: input, stdout: output).call
 
@@ -64,7 +64,7 @@ class RunRowRandomizationTest < Minitest::Test
   def test_supports_custom_separator
     fixture = File.expand_path("../../../fixtures/sample_people_colon.txt", __dir__)
     output = StringIO.new
-    input = StringIO.new("#{fixture}\n5\n:\n\n\n")
+    input = StringIO.new("#{fixture}\n5\n:\n\n\n\n")
 
     Csvtool::Application::UseCases::RunRowRandomization.new(stdin: input, stdout: output).call
 
@@ -77,7 +77,7 @@ class RunRowRandomizationTest < Minitest::Test
   def test_headerless_mode_randomizes_all_rows
     fixture = File.expand_path("../../../fixtures/sample_people_no_headers.csv", __dir__)
     output = StringIO.new
-    input = StringIO.new("#{fixture}\n\nn\n\n")
+    input = StringIO.new("#{fixture}\n\nn\n\n\n")
 
     Csvtool::Application::UseCases::RunRowRandomization.new(stdin: input, stdout: output).call
 
@@ -85,5 +85,40 @@ class RunRowRandomizationTest < Minitest::Test
     assert_includes output.string, "Alice,London"
     assert_includes output.string, "Bob,Paris"
     assert_includes output.string, "Cara,Berlin"
+  end
+
+  def test_same_seed_produces_same_output_order
+    fixture = File.expand_path("../../../fixtures/sample_people_many.csv", __dir__)
+    input_data = "#{fixture}\n\n\n123\n\n"
+
+    out1 = StringIO.new
+    out2 = StringIO.new
+
+    Csvtool::Application::UseCases::RunRowRandomization.new(stdin: StringIO.new(input_data), stdout: out1).call
+    Csvtool::Application::UseCases::RunRowRandomization.new(stdin: StringIO.new(input_data), stdout: out2).call
+
+    rows1 = out1.string.lines.map(&:strip).select { |line| line.include?(",") && !line.start_with?("name,city") }
+    rows2 = out2.string.lines.map(&:strip).select { |line| line.include?(",") && !line.start_with?("name,city") }
+    assert_equal rows1, rows2
+  end
+
+  def test_invalid_seed_shows_friendly_error
+    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
+    output = StringIO.new
+    input = StringIO.new("#{fixture}\n\n\nabc\n")
+
+    Csvtool::Application::UseCases::RunRowRandomization.new(stdin: input, stdout: output).call
+
+    assert_includes output.string, "Seed must be an integer."
+  end
+
+  def test_malformed_csv_shows_friendly_error
+    fixture = File.expand_path("../../../fixtures/sample_people_bad_tail.csv", __dir__)
+    output = StringIO.new
+    input = StringIO.new("#{fixture}\n\n\n\n\n")
+
+    Csvtool::Application::UseCases::RunRowRandomization.new(stdin: input, stdout: output).call
+
+    assert_includes output.string, "Could not parse CSV file."
   end
 end

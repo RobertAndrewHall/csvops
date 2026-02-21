@@ -183,6 +183,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
+      "",
       "4"
     ].join("\n") + "\n"
 
@@ -203,6 +204,7 @@ class TestCli < Minitest::Test
       input = [
         "3",
         fixture_path("sample_people.csv"),
+        "",
         "",
         "",
         "2",
@@ -228,6 +230,7 @@ class TestCli < Minitest::Test
       "2",
       "",
       "",
+      "",
       "4"
     ].join("\n") + "\n"
 
@@ -246,6 +249,7 @@ class TestCli < Minitest::Test
       "",
       "n",
       "",
+      "",
       "4"
     ].join("\n") + "\n"
 
@@ -256,6 +260,24 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Alice,London"
     assert_includes output.string, "Bob,Paris"
     assert_includes output.string, "Cara,Berlin"
+  end
+
+  def test_randomize_rows_invalid_seed_returns_to_menu
+    output = StringIO.new
+    input = [
+      "3",
+      fixture_path("sample_people.csv"),
+      "",
+      "",
+      "abc",
+      "4"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "Seed must be an integer."
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 
   def test_end_to_end_file_output_writes_expected_csv

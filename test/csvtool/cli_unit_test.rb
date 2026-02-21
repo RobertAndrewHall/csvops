@@ -39,7 +39,7 @@ class CliUnitTest < Minitest::Test
   def test_menu_routes_to_randomize_rows_shell
     stdout = StringIO.new
     fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    input = ["3", fixture, "", "", "", "4"].join("\n") + "\n"
+    input = ["3", fixture, "", "", "", "", "4"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "name,city"

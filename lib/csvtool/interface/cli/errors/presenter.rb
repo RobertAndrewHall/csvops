@@ -49,6 +49,10 @@ module Csvtool
             @stdout.puts "Invalid separator choice."
           end
 
+          def invalid_seed
+            @stdout.puts "Seed must be an integer."
+          end
+
           def canceled
             @stdout.puts "Canceled."
           end

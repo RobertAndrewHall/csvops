@@ -18,6 +18,7 @@ class ErrorsPresenterTest < Minitest::Test
     presenter.invalid_output_destination
     presenter.empty_custom_separator
     presenter.invalid_separator_choice
+    presenter.invalid_seed
     presenter.canceled
     presenter.invalid_start_row
     presenter.invalid_end_row
@@ -35,6 +36,7 @@ class ErrorsPresenterTest < Minitest::Test
     assert_includes text, "Invalid output destination."
     assert_includes text, "Separator cannot be empty."
     assert_includes text, "Invalid separator choice."
+    assert_includes text, "Seed must be an integer."
     assert_includes text, "Canceled."
     assert_includes text, "Start row must be a positive integer."
     assert_includes text, "End row must be a positive integer."

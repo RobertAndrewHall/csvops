@@ -5,6 +5,7 @@ require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/headers_present_prompt"
+require "csvtool/interface/cli/prompts/seed_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_randomizer"
@@ -32,7 +33,10 @@ module Csvtool
           headers = headers_present ? @header_reader.call(file_path: file_path, col_sep: col_sep) : nil
           return @errors.no_headers if headers_present && headers.empty?
 
-          rows = @row_randomizer.call(file_path: file_path, col_sep: col_sep, headers: headers_present)
+          seed = Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+          return if seed == Interface::CLI::Prompts::SeedPrompt::INVALID
+
+          rows = @row_randomizer.call(file_path: file_path, col_sep: col_sep, headers: headers_present, seed: seed)
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
             stdin: @stdin,
             stdout: @stdout,
