@@ -53,6 +53,10 @@ Alice
 Bob
 Cara
 Print all values? [y/N]: y
+Output destination:
+1. console
+2. file
+Output destination [1]: 1
 Alice
 Bob
 Cara

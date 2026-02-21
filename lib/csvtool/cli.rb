@@ -84,8 +84,22 @@ module Csvtool
       preview_values = build_preview_values(file_path, column_name, col_sep, skip_blanks: skip_blanks, limit: 10)
       return unless confirm_print_all_values(preview_values)
 
-      stream_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks) do |value|
-        @stdout.puts value
+      output_destination = choose_output_destination
+      return if output_destination.nil?
+
+      case output_destination[:mode]
+      when :console
+        stream_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks) do |value|
+          @stdout.puts value
+        end
+      when :file
+        write_values_to_output_file(
+          file_path,
+          column_name,
+          col_sep,
+          skip_blanks: skip_blanks,
+          output_path: output_destination[:path]
+        )
       end
     rescue CSV::MalformedCSVError
       @stdout.puts "Could not parse CSV file."
@@ -155,6 +169,31 @@ module Csvtool
       !%w[n no].include?(answer)
     end
 
+    def choose_output_destination
+      @stdout.puts "Output destination:"
+      @stdout.puts "1. console"
+      @stdout.puts "2. file"
+      @stdout.print "Output destination [1]: "
+      choice = @stdin.gets&.strip.to_s
+
+      case choice
+      when "", "1"
+        { mode: :console }
+      when "2"
+        @stdout.print "Output file path: "
+        output_path = @stdin.gets&.strip.to_s
+        if output_path.empty?
+          @stdout.puts "Output file path cannot be empty."
+          return nil
+        end
+
+        { mode: :file, path: output_path }
+      else
+        @stdout.puts "Invalid output destination."
+        nil
+      end
+    end
+
     def confirm_print_all_values(preview_values)
       @stdout.puts "Preview (first #{preview_values.length} values):"
       preview_values.each { |value| @stdout.puts value }
@@ -189,6 +228,18 @@ module Csvtool
 
         yield value
       end
+    end
+
+    def write_values_to_output_file(file_path, column_name, col_sep, skip_blanks:, output_path:)
+      CSV.open(output_path, "w") do |csv|
+        csv << [column_name]
+        stream_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks) do |value|
+          csv << [value]
+        end
+      end
+      @stdout.puts "Wrote output to #{output_path}"
+    rescue Errno::EACCES, Errno::ENOENT => e
+      @stdout.puts "Cannot write output file: #{output_path} (#{e.class})"
     end
   end
 end
