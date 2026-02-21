@@ -31,6 +31,16 @@ CSV Tool Menu
 >
 ```
 
+Choose `1` to extract a column:
+
+```text
+CSV file path: /path/to/file.csv
+Column name: name
+Alice
+Bob
+Cara
+```
+
 ## Testing
 
 Run tests:

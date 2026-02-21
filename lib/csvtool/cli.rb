@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "csv"
+
 module Csvtool
   class CLI
     MENU_OPTIONS = [
@@ -37,7 +39,7 @@ module Csvtool
 
         case @stdin.gets&.strip
         when "1"
-          @stdout.puts "Extract column is not implemented yet."
+          run_extract_column
         when "2"
           return 0
         else
@@ -55,6 +57,28 @@ module Csvtool
 
     def print_usage
       @stderr.puts "Usage: tool menu"
+    end
+
+    def run_extract_column
+      @stdout.print "CSV file path: "
+      file_path = @stdin.gets&.strip.to_s
+
+      @stdout.print "Column name: "
+      column_name = @stdin.gets&.strip.to_s
+
+      extract_column_values(file_path, column_name).each do |value|
+        @stdout.puts value
+      end
+    end
+
+    def extract_column_values(file_path, column_name)
+      values = []
+
+      CSV.foreach(file_path, headers: true) do |row|
+        values << row[column_name]
+      end
+
+      values
     end
   end
 end
