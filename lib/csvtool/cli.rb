@@ -81,10 +81,12 @@ module Csvtool
       return if column_name.nil?
 
       skip_blanks = choose_skip_blanks
-      values = extract_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks)
-      return unless confirm_print_all_values(values)
+      preview_values = build_preview_values(file_path, column_name, col_sep, skip_blanks: skip_blanks, limit: 10)
+      return unless confirm_print_all_values(preview_values)
 
-      values.each { |value| @stdout.puts value }
+      stream_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks) do |value|
+        @stdout.puts value
+      end
     rescue CSV::MalformedCSVError
       @stdout.puts "Could not parse CSV file."
     rescue Errno::EACCES
@@ -153,10 +155,9 @@ module Csvtool
       !%w[n no].include?(answer)
     end
 
-    def confirm_print_all_values(values)
-      preview = values.first(10)
-      @stdout.puts "Preview (first #{preview.length} values):"
-      preview.each { |value| @stdout.puts value }
+    def confirm_print_all_values(preview_values)
+      @stdout.puts "Preview (first #{preview_values.length} values):"
+      preview_values.each { |value| @stdout.puts value }
       @stdout.print "Print all values? [y/N]: "
 
       answer = @stdin.gets&.strip.to_s.downcase
@@ -172,17 +173,22 @@ module Csvtool
       headers.compact.reject(&:empty?)
     end
 
-    def extract_column_values(file_path, column_name, col_sep, skip_blanks:)
-      values = []
+    def build_preview_values(file_path, column_name, col_sep, skip_blanks:, limit:)
+      preview_values = []
+      stream_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks) do |value|
+        preview_values << value
+        break if preview_values.length >= limit
+      end
+      preview_values
+    end
 
+    def stream_column_values(file_path, column_name, col_sep, skip_blanks:)
       CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
         value = row[column_name].to_s
         next if skip_blanks && value.strip.empty?
 
-        values << value
+        yield value
       end
-
-      values
     end
   end
 end
