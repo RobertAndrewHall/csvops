@@ -80,18 +80,41 @@ module Csvtool
       column_name = choose_column_name(headers)
       return if column_name.nil?
 
-      unless headers.include?(column_name)
-        @stdout.puts "Column not found."
-        return
-      end
+      skip_blanks = choose_skip_blanks
+      values = extract_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks)
 
-      extract_column_values(file_path, column_name, col_sep).each do |value|
-        @stdout.puts value
-      end
+      values.each { |value| @stdout.puts value }
     rescue CSV::MalformedCSVError
       @stdout.puts "Could not parse CSV file."
     rescue Errno::EACCES
       @stdout.puts "Cannot read file: #{file_path}"
+    end
+
+    def choose_separator
+      @stdout.puts "Choose separator:"
+      @stdout.puts "1. comma (,)"
+      @stdout.puts "2. tab (\\t)"
+      @stdout.puts "3. semicolon (;)"
+      @stdout.puts "4. pipe (|)"
+      @stdout.puts "5. custom"
+      @stdout.print "Separator choice [1]: "
+
+      case @stdin.gets&.strip.to_s
+      when "", "1" then ","
+      when "2" then "\t"
+      when "3" then ";"
+      when "4" then "|"
+      when "5"
+        @stdout.print "Custom separator: "
+        custom = @stdin.gets&.strip.to_s
+        return custom unless custom.empty?
+
+        @stdout.puts "Separator cannot be empty."
+        nil
+      else
+        @stdout.puts "Invalid separator choice."
+        nil
+      end
     end
 
     def choose_column_name(headers)
@@ -116,12 +139,17 @@ module Csvtool
       end
       @stdout.print "Column number: "
 
-      selected_index = @stdin.gets&.strip.to_i
-      selected_header = filtered_headers[selected_index - 1]
+      selected_header = filtered_headers[@stdin.gets&.strip.to_i - 1]
       return selected_header if selected_header
 
       @stdout.puts "Column not found."
       nil
+    end
+
+    def choose_skip_blanks
+      @stdout.print "Skip blank values? [Y/n]: "
+      answer = @stdin.gets&.strip.to_s.downcase
+      !%w[n no].include?(answer)
     end
 
     def read_headers(file_path, col_sep)
@@ -130,43 +158,17 @@ module Csvtool
       headers.compact.reject(&:empty?)
     end
 
-    def extract_column_values(file_path, column_name, col_sep)
+    def extract_column_values(file_path, column_name, col_sep, skip_blanks:)
       values = []
 
       CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
-        values << row[column_name]
+        value = row[column_name].to_s
+        next if skip_blanks && value.strip.empty?
+
+        values << value
       end
 
       values
     end
   end
 end
-    def choose_separator
-      @stdout.puts "Choose separator:"
-      @stdout.puts "1. comma (,)"
-      @stdout.puts "2. tab (\\t)"
-      @stdout.puts "3. semicolon (;)"
-      @stdout.puts "4. pipe (|)"
-      @stdout.puts "5. custom"
-      @stdout.print "Separator choice [1]: "
-      choice = @stdin.gets&.strip.to_s
-
-      case choice
-      when "", "1" then ","
-      when "2" then "\t"
-      when "3" then ";"
-      when "4" then "|"
-      when "5"
-        @stdout.print "Custom separator: "
-        custom = @stdin.gets&.strip.to_s
-        if custom.empty?
-          @stdout.puts "Separator cannot be empty."
-          nil
-        else
-          custom
-        end
-      else
-        @stdout.puts "Invalid separator choice."
-        nil
-      end
-    end

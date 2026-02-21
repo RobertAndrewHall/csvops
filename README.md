@@ -47,6 +47,7 @@ Select column:
 1. name
 2. city
 Column number: 1
+Skip blank values? [Y/n]:
 Alice
 Bob
 Cara

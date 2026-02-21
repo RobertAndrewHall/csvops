@@ -64,6 +64,7 @@ class TestCli < Minitest::Test
       "1",
       "",
       "1",
+      "",
       "2"
     ].join("\n") + "\n"
 
@@ -79,9 +80,10 @@ class TestCli < Minitest::Test
     assert_includes text, "CSV file path: "
     assert_includes text, "Choose separator:"
     assert_includes text, "Select column:"
+    assert_includes text, "Skip blank values? [Y/n]: "
     assert_includes text, "1. name"
     assert_includes text, "2. city"
-    assert_match(/Column number: Alice\nBob\nCara\n/, text)
+    assert_match(/Skip blank values\? \[Y\/n\]: Alice\nBob\nCara\n/, text)
   end
 
   def test_guided_column_selection_with_filter_prints_selected_column_values
@@ -93,6 +95,7 @@ class TestCli < Minitest::Test
       "1",
       "ci",
       "1",
+      "",
       "2"
     ].join("\n") + "\n"
 
@@ -109,7 +112,7 @@ class TestCli < Minitest::Test
     assert_includes text, "Select column:"
     assert_includes text, "1. city"
     refute_includes text, "1. name"
-    assert_match(/Column number: London\nParis\nBerlin\n/, text)
+    assert_match(/Skip blank values\? \[Y\/n\]: London\nParis\nBerlin\n/, text)
   end
 
   def test_missing_file_shows_friendly_error_and_returns_to_menu
@@ -186,7 +189,7 @@ class TestCli < Minitest::Test
     output = StringIO.new
     status = Csvtool::CLI.start(
       ["menu"],
-      stdin: StringIO.new(["1", fixture_path("sample_people.tsv"), "2", "", "1", "2"].join("\n") + "\n"),
+      stdin: StringIO.new(["1", fixture_path("sample_people.tsv"), "2", "", "1", "", "2"].join("\n") + "\n"),
       stdout: output,
       stderr: StringIO.new
     )
@@ -194,14 +197,14 @@ class TestCli < Minitest::Test
     text = output.string
     assert_equal 0, status
     assert_includes text, "2. tab (\\t)"
-    assert_match(/Column number: Alice\nBob\nCara\n/, text)
+    assert_match(/Skip blank values\? \[Y\/n\]: Alice\nBob\nCara\n/, text)
   end
 
   def test_custom_separator_choice_extracts_values
     output = StringIO.new
     status = Csvtool::CLI.start(
       ["menu"],
-      stdin: StringIO.new(["1", fixture_path("sample_people_colon.txt"), "5", ":", "", "1", "2"].join("\n") + "\n"),
+      stdin: StringIO.new(["1", fixture_path("sample_people_colon.txt"), "5", ":", "", "1", "", "2"].join("\n") + "\n"),
       stdout: output,
       stderr: StringIO.new
     )
@@ -209,6 +212,35 @@ class TestCli < Minitest::Test
     text = output.string
     assert_equal 0, status
     assert_includes text, "Custom separator: "
-    assert_match(/Column number: Alice\nBob\nCara\n/, text)
+    assert_match(/Skip blank values\? \[Y\/n\]: Alice\nBob\nCara\n/, text)
+  end
+
+  def test_skip_blanks_default_on_excludes_blank_and_whitespace_values
+    output = StringIO.new
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(["1", fixture_path("sample_people_blanks.csv"), "1", "", "1", "", "2"].join("\n") + "\n"),
+      stdout: output,
+      stderr: StringIO.new
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_match(/Skip blank values\? \[Y\/n\]: Alice\nBob\nCara\n/, text)
+    refute_match(/\n \n/, text)
+  end
+
+  def test_skip_blanks_can_be_disabled_with_no
+    output = StringIO.new
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(["1", fixture_path("sample_people_blanks.csv"), "1", "", "1", "n", "2"].join("\n") + "\n"),
+      stdout: output,
+      stderr: StringIO.new
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_match(/Skip blank values\? \[Y\/n\]: Alice\n \n\nBob\nCara\n/, text)
   end
 end
