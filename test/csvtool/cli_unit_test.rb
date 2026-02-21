@@ -28,7 +28,7 @@ class CliUnitTest < Minitest::Test
   def test_menu_routes_to_row_range_shell
     stdout = StringIO.new
     fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    input = ["2", fixture, "", "2", "3", "3"].join("\n") + "\n"
+    input = ["2", fixture, "", "2", "3", "", "3"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "name,city"

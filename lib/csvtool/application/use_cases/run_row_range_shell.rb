@@ -4,6 +4,7 @@ require "csv"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 
 module Csvtool
@@ -47,9 +48,17 @@ module Csvtool
 
           return @errors.row_range_out_of_bounds(row_index) if row_index < start_row
 
-          @stdout.puts CSV.generate_line(headers, row_sep: "").chomp
-          selected_rows.each do |fields|
-            @stdout.puts CSV.generate_line(fields, row_sep: "").chomp
+          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
+            stdin: @stdin,
+            stdout: @stdout,
+            errors: @errors
+          ).call
+          return if output_destination.nil?
+
+          if output_destination[:mode] == :file
+            write_to_file(output_destination[:path], headers, selected_rows)
+          else
+            write_to_console(headers, selected_rows)
           end
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
@@ -81,6 +90,23 @@ module Csvtool
 
         def positive_integer?(value)
           /\A[1-9]\d*\z/.match?(value)
+        end
+
+        def write_to_console(headers, rows)
+          @stdout.puts CSV.generate_line(headers, row_sep: "").chomp
+          rows.each do |fields|
+            @stdout.puts CSV.generate_line(fields, row_sep: "").chomp
+          end
+        end
+
+        def write_to_file(output_path, headers, rows)
+          CSV.open(output_path, "w") do |csv|
+            csv << headers
+            rows.each { |fields| csv << fields }
+          end
+          @stdout.puts "Wrote output to #{output_path}"
+        rescue Errno::EACCES, Errno::ENOENT => e
+          @errors.cannot_write_output_file(output_path, e.class)
         end
       end
     end

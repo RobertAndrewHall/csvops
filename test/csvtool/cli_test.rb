@@ -57,6 +57,7 @@ class TestCli < Minitest::Test
       "",
       "2",
       "3",
+      "",
       "3"
     ].join("\n") + "\n"
 
@@ -77,6 +78,7 @@ class TestCli < Minitest::Test
       "",
       "0",
       "3",
+      "",
       "3"
     ].join("\n") + "\n"
 
@@ -95,6 +97,7 @@ class TestCli < Minitest::Test
       "2",
       "2",
       "3",
+      "",
       "3"
     ].join("\n") + "\n"
 
@@ -115,6 +118,7 @@ class TestCli < Minitest::Test
       ":",
       "2",
       "3",
+      "",
       "3"
     ].join("\n") + "\n"
 
@@ -124,6 +128,31 @@ class TestCli < Minitest::Test
     assert_includes output.string, "name,city"
     assert_includes output.string, "Bob,Paris"
     assert_includes output.string, "Cara,Berlin"
+  end
+
+  def test_row_range_workflow_can_write_selected_rows_to_file
+    output = StringIO.new
+    output_path = nil
+
+    Dir.mktmpdir do |dir|
+      output_path = File.join(dir, "row_range.csv")
+      input = [
+        "2",
+        fixture_path("sample_people.csv"),
+        "",
+        "2",
+        "3",
+        "2",
+        output_path,
+        "3"
+      ].join("\n") + "\n"
+
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      assert_equal 0, status
+      assert_equal "name,city\nBob,Paris\nCara,Berlin\n", File.read(output_path)
+    end
+
+    assert_includes output.string, "Wrote output to #{output_path}"
   end
 
   def test_end_to_end_file_output_writes_expected_csv
