@@ -4,11 +4,12 @@ module Csvtool
   module Interface
     module CLI
       class MenuLoop
-        def initialize(stdin:, stdout:, menu_options:, extract_action:)
+        def initialize(stdin:, stdout:, menu_options:, extract_column_action:, extract_rows_action:)
           @stdin = stdin
           @stdout = stdout
           @menu_options = menu_options
-          @extract_action = extract_action
+          @extract_column_action = extract_column_action
+          @extract_rows_action = extract_rows_action
         end
 
         def run
@@ -18,11 +19,13 @@ module Csvtool
 
             case @stdin.gets&.strip
             when "1"
-              @extract_action.call
+              @extract_column_action.call
             when "2"
+              @extract_rows_action.call
+            when "3"
               return 0
             else
-              @stdout.puts "Please choose 1 or 2."
+              @stdout.puts "Please choose 1, 2, or 3."
             end
           end
         end

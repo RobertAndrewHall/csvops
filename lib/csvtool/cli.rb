@@ -3,6 +3,7 @@
 require "csv"
 require "csvtool/interface/cli/menu_loop"
 require "csvtool/application/use_cases/run_extraction"
+require "csvtool/application/use_cases/run_row_range_shell"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
@@ -12,6 +13,7 @@ module Csvtool
   class CLI
     MENU_OPTIONS = [
       "Extract column",
+      "Extract rows (range)",
       "Exit"
     ].freeze
 
@@ -41,12 +43,14 @@ module Csvtool
     private
 
     def run_menu_loop
-      extract_action = -> { Application::UseCases::RunExtraction.new(stdin: @stdin, stdout: @stdout).call }
+      extract_column_action = -> { Application::UseCases::RunExtraction.new(stdin: @stdin, stdout: @stdout).call }
+      extract_rows_action = -> { Application::UseCases::RunRowRangeShell.new(stdout: @stdout).call }
       Interface::CLI::MenuLoop.new(
         stdin: @stdin,
         stdout: @stdout,
         menu_options: MENU_OPTIONS,
-        extract_action: extract_action
+        extract_column_action: extract_column_action,
+        extract_rows_action: extract_rows_action
       ).run
     end
 

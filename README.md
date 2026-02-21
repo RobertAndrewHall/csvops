@@ -34,7 +34,8 @@ bundle exec csvtool menu
 ```text
 CSV Tool Menu
 1. Extract column
-2. Exit
+2. Extract rows (range)
+3. Exit
 >
 ```
 

@@ -11,7 +11,7 @@ class TestCli < Minitest::Test
 
   def test_menu_can_exit_cleanly
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("2\n"), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("3\n"), stdout: output, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes output.string, "CSV Tool Menu"
   end
@@ -26,7 +26,7 @@ class TestCli < Minitest::Test
       "",
       "y",
       "",
-      "2"
+      "3"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -65,7 +65,7 @@ class TestCli < Minitest::Test
         "y",
         "2",
         output_path,
-        "2"
+        "3"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -85,7 +85,7 @@ class TestCli < Minitest::Test
       "1",
       "",
       "n",
-      "2"
+      "3"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -100,7 +100,7 @@ class TestCli < Minitest::Test
     output = StringIO.new
     status = Csvtool::CLI.start(
       ["menu"],
-      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n2\n"),
+      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n3\n"),
       stdout: output,
       stderr: StringIO.new
     )
@@ -121,7 +121,7 @@ class TestCli < Minitest::Test
       "y",
       "2",
       "/tmp/not-a-dir/out.csv",
-      "2"
+      "3"
     ].join("\n") + "\n"
 
     output = StringIO.new
