@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "test_helper"
+require_relative "../../test_helper"
 require "csvtool/prompts/file_path_prompt"
 
 class FilePathPromptTest < Minitest::Test

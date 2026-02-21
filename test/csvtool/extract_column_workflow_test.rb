@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "test_helper"
+require_relative "../test_helper"
 require "csvtool/extract_column_workflow"
 
 class ExtractColumnWorkflowTest < Minitest::Test
@@ -18,7 +18,7 @@ class ExtractColumnWorkflowTest < Minitest::Test
 
   def test_workflow_can_run_console_happy_path
     out = StringIO.new
-    fixture = File.expand_path("fixtures/sample_people.csv", __dir__)
+    fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
     input = ["#{fixture}", "1", "", "1", "", "y", ""].join("\n") + "\n"
 
     workflow = Csvtool::ExtractColumnWorkflow.new(stdin: StringIO.new(input), stdout: out)

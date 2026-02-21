@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative "test_helper"
+require_relative "../test_helper"
 require "csvtool/cli"
 require "tmpdir"
 
 class TestCli < Minitest::Test
   def fixture_path(name)
-    File.expand_path("fixtures/#{name}", __dir__)
+    File.expand_path("../fixtures/#{name}", __dir__)
   end
 
   def test_menu_can_exit_cleanly

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "test_helper"
+require_relative "../../test_helper"
 require "csvtool/prompts/column_selector_prompt"
 
 class ColumnSelectorPromptTest < Minitest::Test

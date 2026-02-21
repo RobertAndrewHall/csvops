@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "test_helper"
+require_relative "../../test_helper"
 require "csvtool/output/csv_file_writer"
 require "csvtool/errors/presenter"
 require "tmpdir"
