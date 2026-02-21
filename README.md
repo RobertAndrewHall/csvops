@@ -136,7 +136,7 @@ gem install csvops --pre
 
 Release runbook:
 
-- `/Users/roberthall/Projects/csvops/docs/release-v0.1.0-alpha.md`
+- `docs/release-v0.1.0-alpha.md`
 
 ## Architecture
 
