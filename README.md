@@ -1,0 +1,55 @@
+# CSV Ops CLI
+
+`csvops` is a small Ruby CLI for interactive CSV workflows.
+
+## Requirements
+
+- Ruby (tested with Ruby 2.6+)
+- `rake`
+- `minitest`
+
+Install dependencies:
+
+```bash
+bundle install
+```
+
+## Usage
+
+Run the interactive menu:
+
+```bash
+./bin/tool menu
+```
+
+You should see:
+
+```text
+CSV Tool Menu
+1. Extract column
+2. Exit
+>
+```
+
+## Testing
+
+Run tests:
+
+```bash
+rake test
+```
+
+Or:
+
+```bash
+bundle exec rake test
+```
+
+## Project layout
+
+```text
+bin/tool              # CLI entrypoint
+lib/csvtool/cli.rb    # CLI behavior
+test/cli_test.rb      # unit tests for menu behavior
+test/test_helper.rb   # test setup
+```
