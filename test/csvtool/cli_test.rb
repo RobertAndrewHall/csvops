@@ -11,7 +11,7 @@ class TestCli < Minitest::Test
 
   def test_menu_can_exit_cleanly
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("3\n"), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("4\n"), stdout: output, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes output.string, "CSV Tool Menu"
   end
@@ -26,7 +26,7 @@ class TestCli < Minitest::Test
       "",
       "y",
       "",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -58,7 +58,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -79,7 +79,7 @@ class TestCli < Minitest::Test
       "0",
       "3",
       "",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -98,7 +98,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -119,7 +119,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -144,7 +144,7 @@ class TestCli < Minitest::Test
         "3",
         "2",
         output_path,
-        "3"
+        "4"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -164,7 +164,7 @@ class TestCli < Minitest::Test
       "1",
       "2",
       "",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -191,7 +191,7 @@ class TestCli < Minitest::Test
         "y",
         "2",
         output_path,
-        "3"
+        "4"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -211,7 +211,7 @@ class TestCli < Minitest::Test
       "1",
       "",
       "n",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -226,7 +226,7 @@ class TestCli < Minitest::Test
     output = StringIO.new
     status = Csvtool::CLI.start(
       ["menu"],
-      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n3\n"),
+      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n4\n"),
       stdout: output,
       stderr: StringIO.new
     )
@@ -247,7 +247,7 @@ class TestCli < Minitest::Test
       "y",
       "2",
       "/tmp/not-a-dir/out.csv",
-      "3"
+      "4"
     ].join("\n") + "\n"
 
     output = StringIO.new

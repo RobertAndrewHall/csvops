@@ -4,6 +4,7 @@ require "csv"
 require "csvtool/interface/cli/menu_loop"
 require "csvtool/application/use_cases/run_extraction"
 require "csvtool/application/use_cases/run_row_extraction"
+require "csvtool/application/use_cases/run_row_randomization"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
@@ -14,6 +15,7 @@ module Csvtool
     MENU_OPTIONS = [
       "Extract column",
       "Extract rows (range)",
+      "Randomize rows",
       "Exit"
     ].freeze
 
@@ -45,12 +47,14 @@ module Csvtool
     def run_menu_loop
       extract_column_action = -> { Application::UseCases::RunExtraction.new(stdin: @stdin, stdout: @stdout).call }
       extract_rows_action = -> { Application::UseCases::RunRowExtraction.new(stdin: @stdin, stdout: @stdout).call }
+      randomize_rows_action = -> { Application::UseCases::RunRowRandomization.new(stdin: @stdin, stdout: @stdout).call }
       Interface::CLI::MenuLoop.new(
         stdin: @stdin,
         stdout: @stdout,
         menu_options: MENU_OPTIONS,
         extract_column_action: extract_column_action,
-        extract_rows_action: extract_rows_action
+        extract_rows_action: extract_rows_action,
+        randomize_rows_action: randomize_rows_action
       ).run
     end
 
