@@ -151,7 +151,7 @@ The codebase follows a DDD-lite layered structure:
 
 ## Domain model
 
-Bounded contexts: `Column Extraction` and `Row Extraction`.
+Bounded contexts: `Column Extraction`, `Row Extraction`, and `Row Randomization`.
 
 ### Column Extraction
 
@@ -233,6 +233,7 @@ flowchart LR
 - Randomization uses `RAND + sort` with temp chunk files and external merge.
 - This supports large files out of the box without loading all rows at once.
 - Seeded runs are reproducible (`same seed + same input => same output order`).
+- Domain context: `Domain::RowRandomizationSession` (`RandomizationSource`, `RandomizationOptions`, `RandomizationOutputDestination`, `RandomizationSession`).
 
 ## Project layout
 

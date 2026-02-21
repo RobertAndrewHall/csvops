@@ -9,6 +9,10 @@ require "csvtool/interface/cli/prompts/seed_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_randomizer"
+require "csvtool/domain/row_randomization_session/randomization_source"
+require "csvtool/domain/row_randomization_session/randomization_options"
+require "csvtool/domain/row_randomization_session/randomization_output_destination"
+require "csvtool/domain/row_randomization_session/randomization_session"
 
 module Csvtool
   module Application
@@ -30,11 +34,18 @@ module Csvtool
           return if col_sep.nil?
 
           headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout).call
-          headers = headers_present ? @header_reader.call(file_path: file_path, col_sep: col_sep) : nil
-          return @errors.no_headers if headers_present && headers.empty?
+          source = Domain::RowRandomizationSession::RandomizationSource.new(
+            path: file_path,
+            separator: col_sep,
+            headers_present: headers_present
+          )
+          headers = source.headers_present? ? @header_reader.call(file_path: source.path, col_sep: source.separator) : nil
+          return @errors.no_headers if source.headers_present? && headers.empty?
 
           seed = Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if seed == Interface::CLI::Prompts::SeedPrompt::INVALID
+          options = Domain::RowRandomizationSession::RandomizationOptions.new(seed: seed)
+          session = Domain::RowRandomizationSession::RandomizationSession.start(source: source, options: options)
 
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
             stdin: @stdin,
@@ -42,21 +53,32 @@ module Csvtool
             errors: @errors
           ).call
           return if output_destination.nil?
+          destination =
+            if output_destination[:mode] == :file
+              Domain::RowRandomizationSession::RandomizationOutputDestination.file(path: output_destination[:path])
+            else
+              Domain::RowRandomizationSession::RandomizationOutputDestination.console
+            end
+          session = session.with_output_destination(destination)
 
           randomized_rows = @row_randomizer.each(
-            file_path: file_path,
-            col_sep: col_sep,
-            headers: headers_present,
-            seed: seed
+            file_path: session.source.path,
+            col_sep: session.source.separator,
+            headers: session.source.headers_present?,
+            seed: session.options.seed
           )
 
-          if output_destination[:mode] == :file
-            write_output_file(output_destination[:path], headers, randomized_rows, col_sep: col_sep)
+          if session.output_destination.file?
+            write_output_file(session.output_destination.path, headers, randomized_rows, col_sep: session.source.separator)
           else
-            print_to_console(headers, randomized_rows, col_sep: col_sep)
+            print_to_console(headers, randomized_rows, col_sep: session.source.separator)
           end
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
+        rescue ArgumentError => e
+          return @errors.empty_output_path if e.message == "file output path cannot be empty"
+
+          raise e
         rescue Errno::EACCES
           @errors.cannot_read_file(file_path)
         end
