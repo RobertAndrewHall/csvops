@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative "../../test_helper"
-require "csvtool/prompts/column_selector_prompt"
+require_relative "../../../../test_helper"
+require "csvtool/interface/cli/prompts/column_selector_prompt"
 
 class ColumnSelectorPromptTest < Minitest::Test
   class FakeErrors
@@ -16,7 +16,7 @@ class ColumnSelectorPromptTest < Minitest::Test
 
   def test_selects_filtered_header
     errors = FakeErrors.new
-    prompt = Csvtool::Prompts::ColumnSelectorPrompt.new(stdin: StringIO.new("ci\n1\n"), stdout: StringIO.new, errors: errors)
+    prompt = Csvtool::Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: StringIO.new("ci\n1\n"), stdout: StringIO.new, errors: errors)
     assert_equal "city", prompt.call(%w[name city])
     assert_empty errors.calls
   end

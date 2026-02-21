@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative "../../test_helper"
-require "csvtool/errors/presenter"
+require_relative "../../../../test_helper"
+require "csvtool/interface/cli/errors/presenter"
 
 class ErrorsPresenterTest < Minitest::Test
   def test_all_messages_are_presented
     out = StringIO.new
-    presenter = Csvtool::Errors::Presenter.new(stdout: out)
+    presenter = Csvtool::Interface::CLI::Errors::Presenter.new(stdout: out)
 
     presenter.file_not_found("/tmp/x.csv")
     presenter.no_headers

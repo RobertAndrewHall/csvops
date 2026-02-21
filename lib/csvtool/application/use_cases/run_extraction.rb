@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 require "csv"
-require "csvtool/errors/presenter"
-require "csvtool/prompts/file_path_prompt"
-require "csvtool/prompts/separator_prompt"
-require "csvtool/prompts/column_selector_prompt"
-require "csvtool/prompts/skip_blanks_prompt"
-require "csvtool/prompts/confirm_prompt"
-require "csvtool/prompts/output_destination_prompt"
+require "csvtool/interface/cli/errors/presenter"
+require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/column_selector_prompt"
+require "csvtool/interface/cli/prompts/skip_blanks_prompt"
+require "csvtool/interface/cli/prompts/confirm_prompt"
+require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
 require "csvtool/services/preview_builder"
@@ -29,17 +29,17 @@ module Csvtool
         def initialize(stdin:, stdout:)
           @stdin = stdin
           @stdout = stdout
-          @errors = Errors::Presenter.new(stdout: stdout)
+          @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
           @header_reader = Infrastructure::CSV::HeaderReader.new
           @value_streamer = Infrastructure::CSV::ValueStreamer.new
           @preview_builder = Services::PreviewBuilder.new(value_streamer: @value_streamer)
         end
 
         def call
-          file_path = Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
+          file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
           return @errors.file_not_found(file_path) unless File.file?(file_path)
 
-          col_sep = Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+          col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if col_sep.nil?
           separator = Domain::ExtractionSession::Separator.new(col_sep)
 
@@ -47,11 +47,11 @@ module Csvtool
           headers = @header_reader.call(file_path: source.path, col_sep: source.separator.value)
           return @errors.no_headers if headers.empty?
 
-          column_name = Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(headers)
+          column_name = Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(headers)
           return if column_name.nil?
           column_selection = Domain::ExtractionSession::ColumnSelection.new(name: column_name)
 
-          skip_blanks = Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout).call
+          skip_blanks = Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout).call
           options = Domain::ExtractionSession::ExtractionOptions.new(skip_blanks: skip_blanks, preview_limit: 10)
           session = Domain::ExtractionSession::ExtractionSession.start(
             source: source,
@@ -71,11 +71,11 @@ module Csvtool
           )
           session = session.with_preview(preview)
 
-          confirmed = Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(session.preview.to_strings)
+          confirmed = Interface::CLI::Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(session.preview.to_strings)
           return unless confirmed
           session = session.confirm!
 
-          output_destination = Prompts::OutputDestinationPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if output_destination.nil?
           domain_destination =
             if output_destination[:mode] == :file

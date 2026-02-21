@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "csvtool/menu_loop"
-require "csvtool/extract_column_workflow"
+require "csvtool/interface/cli/menu_loop"
+require "csvtool/application/use_cases/run_extraction"
 
 module Csvtool
   class CLI
@@ -34,8 +34,13 @@ module Csvtool
     private
 
     def run_menu_loop
-      workflow = ExtractColumnWorkflow.new(stdin: @stdin, stdout: @stdout)
-      MenuLoop.new(stdin: @stdin, stdout: @stdout, menu_options: MENU_OPTIONS, extract_workflow: workflow).run
+      extract_action = -> { Application::UseCases::RunExtraction.new(stdin: @stdin, stdout: @stdout).call }
+      Interface::CLI::MenuLoop.new(
+        stdin: @stdin,
+        stdout: @stdout,
+        menu_options: MENU_OPTIONS,
+        extract_action: extract_action
+      ).run
     end
 
     def print_usage
