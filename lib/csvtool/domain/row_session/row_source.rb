@@ -2,7 +2,7 @@
 
 module Csvtool
   module Domain
-    module RowRangeSession
+    module RowSession
       class RowSource
         attr_reader :path, :separator
 

@@ -2,8 +2,8 @@
 
 module Csvtool
   module Domain
-    module RowRangeSession
-      class RowRangeSession
+    module RowSession
+      class RowSession
         attr_reader :source, :row_range, :output_destination
 
         def self.start(source:, row_range:)

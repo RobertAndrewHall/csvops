@@ -2,7 +2,7 @@
 
 module Csvtool
   module Domain
-    module RowRangeSession
+    module RowSession
       class InvalidStartRowError < StandardError; end
       class InvalidEndRowError < StandardError; end
       class InvalidRowRangeOrderError < StandardError; end

@@ -2,8 +2,8 @@
 
 module Csvtool
   module Domain
-    module RowRangeSession
-      class OutputDestination
+    module RowSession
+      class RowOutputDestination
         attr_reader :mode, :path
 
         def self.console

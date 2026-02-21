@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
 require_relative "../../../test_helper"
-require "csvtool/application/use_cases/run_row_range_shell"
+require "csvtool/application/use_cases/run_row_extraction"
 require "tmpdir"
 
-class RunRowRangeShellTest < Minitest::Test
+class RunRowExtractionTest < Minitest::Test
   def test_use_case_prints_selected_row_range_with_header
     out = StringIO.new
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
     input = [fixture, "", "2", "3", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "name,city"
@@ -24,7 +24,7 @@ class RunRowRangeShellTest < Minitest::Test
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
     input = [fixture, "", "abc", "3", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "Start row must be a positive integer."
@@ -36,7 +36,7 @@ class RunRowRangeShellTest < Minitest::Test
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
     input = [fixture, "", "1", "xyz", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "End row must be a positive integer."
@@ -48,7 +48,7 @@ class RunRowRangeShellTest < Minitest::Test
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
     input = [fixture, "", "3", "2", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "End row must be greater than or equal to start row."
@@ -60,7 +60,7 @@ class RunRowRangeShellTest < Minitest::Test
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
     input = [fixture, "", "10", "12", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "Row range is out of bounds. File has 3 data rows."
@@ -72,7 +72,7 @@ class RunRowRangeShellTest < Minitest::Test
     fixture = File.expand_path("../../../fixtures/sample_people.tsv", __dir__)
     input = [fixture, "2", "2", "3", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "name,city"
@@ -85,7 +85,7 @@ class RunRowRangeShellTest < Minitest::Test
     fixture = File.expand_path("../../../fixtures/sample_people_colon.txt", __dir__)
     input = [fixture, "5", ":", "2", "3", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "name,city"
@@ -101,7 +101,7 @@ class RunRowRangeShellTest < Minitest::Test
       output_path = File.join(dir, "rows.csv")
       input = [fixture, "", "2", "3", "2", output_path].join("\n") + "\n"
 
-      use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+      use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
       use_case.call
 
       assert_equal "name,city\nBob,Paris\nCara,Berlin\n", File.read(output_path)
@@ -114,7 +114,7 @@ class RunRowRangeShellTest < Minitest::Test
     fixture = File.expand_path("../../../fixtures/sample_people_bad_tail.csv", __dir__)
     input = [fixture, "", "1", "2", ""].join("\n") + "\n"
 
-    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "name,city"
@@ -131,7 +131,7 @@ class RunRowRangeShellTest < Minitest::Test
       output_path = File.join(dir, "rows.csv")
       input = [fixture, "", "10", "12", "2", output_path].join("\n") + "\n"
 
-      use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+      use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
       use_case.call
     end
 

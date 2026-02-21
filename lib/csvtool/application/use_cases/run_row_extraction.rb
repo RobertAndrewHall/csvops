@@ -9,15 +9,15 @@ require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_streamer"
 require "csvtool/infrastructure/output/csv_row_console_writer"
 require "csvtool/infrastructure/output/csv_row_file_writer"
-require "csvtool/domain/row_range_session/row_range"
-require "csvtool/domain/row_range_session/row_source"
-require "csvtool/domain/row_range_session/output_destination"
-require "csvtool/domain/row_range_session/row_range_session"
+require "csvtool/domain/row_session/row_range"
+require "csvtool/domain/row_session/row_source"
+require "csvtool/domain/row_session/row_output_destination"
+require "csvtool/domain/row_session/row_session"
 
 module Csvtool
   module Application
     module UseCases
-      class RunRowRangeShell
+      class RunRowExtraction
         def initialize(stdin:, stdout:)
           @stdin = stdin
           @stdout = stdout
@@ -32,7 +32,7 @@ module Csvtool
 
           col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if col_sep.nil?
-          source = Domain::RowRangeSession::RowSource.new(path: file_path, separator: col_sep)
+          source = Domain::RowSession::RowSource.new(path: file_path, separator: col_sep)
 
           @stdout.print "Start row (1-based, inclusive): "
           start_row_input = @stdin.gets&.strip.to_s
@@ -42,11 +42,11 @@ module Csvtool
           headers = @header_reader.call(file_path: source.path, col_sep: source.separator)
           return @errors.no_headers if headers.empty?
 
-          row_range = Domain::RowRangeSession::RowRange.from_inputs(
+          row_range = Domain::RowSession::RowRange.from_inputs(
             start_row_input: start_row_input,
             end_row_input: end_row_input
           )
-          session = Domain::RowRangeSession::RowRangeSession.start(source: source, row_range: row_range)
+          session = Domain::RowSession::RowSession.start(source: source, row_range: row_range)
 
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
             stdin: @stdin,
@@ -56,9 +56,9 @@ module Csvtool
           return if output_destination.nil?
           destination =
             if output_destination[:mode] == :file
-              Domain::RowRangeSession::OutputDestination.file(path: output_destination[:path])
+              Domain::RowSession::RowOutputDestination.file(path: output_destination[:path])
             else
-              Domain::RowRangeSession::OutputDestination.console
+              Domain::RowSession::RowOutputDestination.console
             end
           session = session.with_output_destination(destination)
 
@@ -88,11 +88,11 @@ module Csvtool
           return if stats.nil?
 
           @errors.row_range_out_of_bounds(stats[:row_count]) unless stats[:matched]
-        rescue Domain::RowRangeSession::InvalidStartRowError
+        rescue Domain::RowSession::InvalidStartRowError
           @errors.invalid_start_row
-        rescue Domain::RowRangeSession::InvalidEndRowError
+        rescue Domain::RowSession::InvalidEndRowError
           @errors.invalid_end_row
-        rescue Domain::RowRangeSession::InvalidRowRangeOrderError
+        rescue Domain::RowSession::InvalidRowRangeOrderError
           @errors.invalid_row_range_order
         rescue ArgumentError => e
           return @errors.empty_output_path if e.message == "file output path cannot be empty"
