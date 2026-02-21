@@ -13,6 +13,14 @@ require "csvtool/services/value_streamer"
 require "csvtool/services/preview_builder"
 require "csvtool/output/console_writer"
 require "csvtool/output/csv_file_writer"
+require "csvtool/domain/extraction_session/separator"
+require "csvtool/domain/extraction_session/csv_source"
+require "csvtool/domain/extraction_session/column_selection"
+require "csvtool/domain/extraction_session/extraction_options"
+require "csvtool/domain/extraction_session/extraction_value"
+require "csvtool/domain/extraction_session/preview"
+require "csvtool/domain/extraction_session/output_destination"
+require "csvtool/domain/extraction_session/extraction_session"
 
 module Csvtool
   class ExtractColumnWorkflow
@@ -31,33 +39,56 @@ module Csvtool
 
       col_sep = Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
       return if col_sep.nil?
+      separator = Domain::ExtractionSession::Separator.new(col_sep)
 
-      headers = @header_reader.call(file_path: file_path, col_sep: col_sep)
+      source = Domain::ExtractionSession::CsvSource.new(path: file_path, separator: separator)
+      headers = @header_reader.call(file_path: source.path, col_sep: source.separator.value)
       return @errors.no_headers if headers.empty?
 
       column_name = Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(headers)
       return if column_name.nil?
+      column_selection = Domain::ExtractionSession::ColumnSelection.new(name: column_name)
 
       skip_blanks = Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout).call
-      preview_values = @preview_builder.call(
-        file_path: file_path,
-        column_name: column_name,
-        col_sep: col_sep,
-        skip_blanks: skip_blanks,
-        limit: 10
+      options = Domain::ExtractionSession::ExtractionOptions.new(skip_blanks: skip_blanks, preview_limit: 10)
+      session = Domain::ExtractionSession::ExtractionSession.start(
+        source: source,
+        column_selection: column_selection,
+        options: options
       )
-      confirmed = Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(preview_values)
+
+      preview_values = @preview_builder.call(
+        file_path: session.source.path,
+        column_name: session.column_selection.name,
+        col_sep: session.source.separator.value,
+        skip_blanks: session.options.skip_blanks?,
+        limit: session.options.preview_limit
+      )
+      preview = Domain::ExtractionSession::Preview.new(
+        values: preview_values.map { |value| Domain::ExtractionSession::ExtractionValue.new(value) }
+      )
+      session = session.with_preview(preview)
+
+      confirmed = Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(session.preview.to_strings)
       return unless confirmed
+      session = session.confirm!
 
       output_destination = Prompts::OutputDestinationPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
       return if output_destination.nil?
+      domain_destination =
+        if output_destination[:mode] == :file
+          Domain::ExtractionSession::OutputDestination.file(path: output_destination[:path])
+        else
+          Domain::ExtractionSession::OutputDestination.console
+        end
+      session = session.with_output_destination(domain_destination)
 
       write_output(
-        output_destination,
-        file_path: file_path,
-        column_name: column_name,
-        col_sep: col_sep,
-        skip_blanks: skip_blanks
+        session.output_destination,
+        file_path: session.source.path,
+        column_name: session.column_selection.name,
+        col_sep: session.source.separator.value,
+        skip_blanks: session.options.skip_blanks?
       )
     rescue CSV::MalformedCSVError
       @errors.could_not_parse_csv
@@ -68,8 +99,7 @@ module Csvtool
     private
 
     def writer_for(output_destination)
-      case output_destination[:mode]
-      when :file
+      if output_destination.file?
         Output::CsvFileWriter.new(stdout: @stdout, errors: @errors, value_streamer: @value_streamer)
       else
         Output::ConsoleWriter.new(stdout: @stdout, value_streamer: @value_streamer)
@@ -84,7 +114,7 @@ module Csvtool
         col_sep: col_sep,
         skip_blanks: skip_blanks
       }
-      args[:output_path] = output_destination[:path] if output_destination[:mode] == :file
+      args[:output_path] = output_destination.path if output_destination.file?
       writer.call(**args)
     end
   end
