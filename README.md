@@ -76,11 +76,30 @@ Or:
 bundle exec rake test
 ```
 
+## Architecture
+
+The CLI is organized into small single-responsibility classes:
+
+- `Csvtool::CLI` wires command handling and menu startup.
+- `Csvtool::MenuLoop` handles menu rendering and routing.
+- `Csvtool::ExtractColumnWorkflow` orchestrates extract flow steps.
+- `Csvtool::Prompts::*` classes handle one user prompt each.
+- `Csvtool::Services::*` classes handle CSV domain operations.
+- `Csvtool::Output::*` classes handle output strategies (console/file).
+- `Csvtool::Errors::Presenter` centralizes friendly user-facing errors.
+
 ## Project layout
 
 ```text
 bin/tool              # CLI entrypoint
-lib/csvtool/cli.rb    # CLI behavior
-test/cli_test.rb      # unit tests for menu behavior
-test/test_helper.rb   # test setup
+lib/csvtool/cli.rb
+lib/csvtool/menu_loop.rb
+lib/csvtool/extract_column_workflow.rb
+lib/csvtool/prompts/*            # focused input prompts
+lib/csvtool/services/*           # header read, streaming, preview
+lib/csvtool/output/*             # console/file writers
+lib/csvtool/errors/presenter.rb
+test/cli_test.rb                 # end-to-end workflow tests
+test/*_test.rb                   # focused unit tests for components
+test/test_helper.rb
 ```
