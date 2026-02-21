@@ -68,6 +68,23 @@ class TestCli < Minitest::Test
     refute_includes output.string, "Alice,London"
   end
 
+  def test_row_range_invalid_inputs_return_to_menu
+    output = StringIO.new
+    input = [
+      "2",
+      fixture_path("sample_people.csv"),
+      "0",
+      "3",
+      "3"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "Start row must be a positive integer."
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+  end
+
   def test_end_to_end_file_output_writes_expected_csv
     output = StringIO.new
     output_path = nil

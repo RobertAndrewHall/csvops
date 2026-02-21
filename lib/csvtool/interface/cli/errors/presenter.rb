@@ -52,6 +52,22 @@ module Csvtool
           def canceled
             @stdout.puts "Canceled."
           end
+
+          def invalid_start_row
+            @stdout.puts "Start row must be a positive integer."
+          end
+
+          def invalid_end_row
+            @stdout.puts "End row must be a positive integer."
+          end
+
+          def invalid_row_range_order
+            @stdout.puts "End row must be greater than or equal to start row."
+          end
+
+          def row_range_out_of_bounds(total_rows)
+            @stdout.puts "Row range is out of bounds. File has #{total_rows} data rows."
+          end
         end
       end
     end
