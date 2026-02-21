@@ -88,6 +88,32 @@ The CLI is organized into small single-responsibility classes:
 - `Csvtool::Output::*` classes handle output strategies (console/file).
 - `Csvtool::Errors::Presenter` centralizes friendly user-facing errors.
 
+## Domain model
+
+The problem domain is "extract values from one selected CSV column with safe interactive controls."
+
+- `InputFile`: CSV source selected by path + separator.
+- `HeaderSet`: headers discovered from `InputFile`.
+- `SelectedColumn`: one header chosen by filtered interactive selection.
+- `ExtractionPolicy`: options that affect extraction behavior (`skip_blanks`).
+- `Preview`: first `N` extracted values shown before execution.
+- `OutputDecision`: user confirmation (`print all?`) plus destination choice (`console` or `file`).
+- `OutputFile`: optional CSV sink for extracted values (single-column CSV with header).
+
+```mermaid
+flowchart TD
+  A["InputFile (path + separator)"] --> B["HeaderSet"]
+  B --> C["SelectedColumn"]
+  C --> D["ExtractionPolicy (skip_blanks)"]
+  D --> E["ValueStream (row-by-row)"]
+  E --> F["Preview (first N values)"]
+  F --> G{"Confirm print/write?"}
+  G -->|"No"| H["Cancel + return to menu"]
+  G -->|"Yes"| I{"OutputDecision"}
+  I -->|"Console"| J["ConsoleOutput (stream values)"]
+  I -->|"File"| K["OutputFile CSV (header + one value per row)"]
+```
+
 ## Project layout
 
 ```text
@@ -99,7 +125,7 @@ lib/csvtool/prompts/*            # focused input prompts
 lib/csvtool/services/*           # header read, streaming, preview
 lib/csvtool/output/*             # console/file writers
 lib/csvtool/errors/presenter.rb
-test/cli_test.rb                 # end-to-end workflow tests
-test/*_test.rb                   # focused unit tests for components
+test/csvtool/cli_test.rb         # end-to-end workflow tests
+test/csvtool/**/*_test.rb        # focused unit tests by component folder
 test/test_helper.rb
 ```
