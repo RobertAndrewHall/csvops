@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.executables = ["csvtool"]
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "csv"
-  spec.add_development_dependency "minitest"
-  spec.add_development_dependency "rake"
+  spec.add_dependency "csv", "~> 3.3"
+  spec.add_development_dependency "minitest", "~> 6.0"
+  spec.add_development_dependency "rake", "~> 13.0"
 end

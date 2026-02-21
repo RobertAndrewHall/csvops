@@ -124,6 +124,20 @@ Or:
 bundle exec rake test
 ```
 
+## Alpha release
+
+Current prerelease version: `0.1.0.alpha`
+
+Install prerelease from RubyGems:
+
+```bash
+gem install csvops --pre
+```
+
+Release runbook:
+
+- `/Users/roberthall/Projects/csvops/docs/release-v0.1.0-alpha.md`
+
 ## Architecture
 
 The codebase follows a DDD-lite layered structure:
