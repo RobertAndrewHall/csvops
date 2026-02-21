@@ -8,11 +8,11 @@ require "csvtool/prompts/column_selector_prompt"
 require "csvtool/prompts/skip_blanks_prompt"
 require "csvtool/prompts/confirm_prompt"
 require "csvtool/prompts/output_destination_prompt"
-require "csvtool/services/header_reader"
-require "csvtool/services/value_streamer"
+require "csvtool/infrastructure/csv/header_reader"
+require "csvtool/infrastructure/csv/value_streamer"
 require "csvtool/services/preview_builder"
-require "csvtool/output/console_writer"
-require "csvtool/output/csv_file_writer"
+require "csvtool/infrastructure/output/console_writer"
+require "csvtool/infrastructure/output/csv_file_writer"
 require "csvtool/domain/extraction_session/separator"
 require "csvtool/domain/extraction_session/csv_source"
 require "csvtool/domain/extraction_session/column_selection"
@@ -30,8 +30,8 @@ module Csvtool
           @stdin = stdin
           @stdout = stdout
           @errors = Errors::Presenter.new(stdout: stdout)
-          @header_reader = Services::HeaderReader.new
-          @value_streamer = Services::ValueStreamer.new
+          @header_reader = Infrastructure::CSV::HeaderReader.new
+          @value_streamer = Infrastructure::CSV::ValueStreamer.new
           @preview_builder = Services::PreviewBuilder.new(value_streamer: @value_streamer)
         end
 
@@ -102,9 +102,9 @@ module Csvtool
 
         def writer_for(output_destination)
           if output_destination.file?
-            Output::CsvFileWriter.new(stdout: @stdout, errors: @errors, value_streamer: @value_streamer)
+            Infrastructure::Output::CsvFileWriter.new(stdout: @stdout, errors: @errors, value_streamer: @value_streamer)
           else
-            Output::ConsoleWriter.new(stdout: @stdout, value_streamer: @value_streamer)
+            Infrastructure::Output::ConsoleWriter.new(stdout: @stdout, value_streamer: @value_streamer)
           end
         end
 
