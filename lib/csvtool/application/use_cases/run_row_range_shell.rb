@@ -6,6 +6,10 @@ require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
+require "csvtool/domain/row_range_session/row_range"
+require "csvtool/domain/row_range_session/row_source"
+require "csvtool/domain/row_range_session/output_destination"
+require "csvtool/domain/row_range_session/row_range_session"
 
 module Csvtool
   module Application
@@ -24,17 +28,21 @@ module Csvtool
 
           col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if col_sep.nil?
+          source = Domain::RowRangeSession::RowSource.new(path: file_path, separator: col_sep)
 
           @stdout.print "Start row (1-based, inclusive): "
           start_row_input = @stdin.gets&.strip.to_s
           @stdout.print "End row (1-based, inclusive): "
           end_row_input = @stdin.gets&.strip.to_s
 
-          headers = @header_reader.call(file_path: file_path, col_sep: col_sep)
+          headers = @header_reader.call(file_path: source.path, col_sep: source.separator)
           return @errors.no_headers if headers.empty?
 
-          start_row, end_row = parse_and_validate_range(start_row_input, end_row_input)
-          return if start_row.nil?
+          row_range = Domain::RowRangeSession::RowRange.from_inputs(
+            start_row_input: start_row_input,
+            end_row_input: end_row_input
+          )
+          session = Domain::RowRangeSession::RowRangeSession.start(source: source, row_range: row_range)
 
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
             stdin: @stdin,
@@ -42,56 +50,49 @@ module Csvtool
             errors: @errors
           ).call
           return if output_destination.nil?
+          destination =
+            if output_destination[:mode] == :file
+              Domain::RowRangeSession::OutputDestination.file(path: output_destination[:path])
+            else
+              Domain::RowRangeSession::OutputDestination.console
+            end
+          session = session.with_output_destination(destination)
 
-          if output_destination[:mode] == :file
+          if session.output_destination.file?
             write_to_file(
-              output_path: output_destination[:path],
-              file_path: file_path,
-              col_sep: col_sep,
+              output_path: session.output_destination.path,
+              file_path: session.source.path,
+              col_sep: session.source.separator,
               headers: headers,
-              start_row: start_row,
-              end_row: end_row
+              start_row: session.row_range.start_row,
+              end_row: session.row_range.end_row
             )
           else
             write_to_console(
-              file_path: file_path,
-              col_sep: col_sep,
+              file_path: session.source.path,
+              col_sep: session.source.separator,
               headers: headers,
-              start_row: start_row,
-              end_row: end_row
+              start_row: session.row_range.start_row,
+              end_row: session.row_range.end_row
             )
           end
+        rescue Domain::RowRangeSession::InvalidStartRowError
+          @errors.invalid_start_row
+        rescue Domain::RowRangeSession::InvalidEndRowError
+          @errors.invalid_end_row
+        rescue Domain::RowRangeSession::InvalidRowRangeOrderError
+          @errors.invalid_row_range_order
+        rescue ArgumentError => e
+          return @errors.empty_output_path if e.message == "file output path cannot be empty"
+
+          raise e
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
         rescue Errno::EACCES
           @errors.cannot_read_file(file_path)
         end
-
+        
         private
-
-        def parse_and_validate_range(start_row_input, end_row_input)
-          unless positive_integer?(start_row_input)
-            @errors.invalid_start_row
-            return [nil, nil]
-          end
-          unless positive_integer?(end_row_input)
-            @errors.invalid_end_row
-            return [nil, nil]
-          end
-
-          start_row = start_row_input.to_i
-          end_row = end_row_input.to_i
-          if end_row < start_row
-            @errors.invalid_row_range_order
-            return [nil, nil]
-          end
-
-          [start_row, end_row]
-        end
-
-        def positive_integer?(value)
-          /\A[1-9]\d*\z/.match?(value)
-        end
 
         def write_to_console(file_path:, col_sep:, headers:, start_row:, end_row:)
           wrote_rows = false
