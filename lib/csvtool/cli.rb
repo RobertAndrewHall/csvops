@@ -44,7 +44,7 @@ module Csvtool
 
     def run_menu_loop
       extract_column_action = -> { Application::UseCases::RunExtraction.new(stdin: @stdin, stdout: @stdout).call }
-      extract_rows_action = -> { Application::UseCases::RunRowRangeShell.new(stdout: @stdout).call }
+      extract_rows_action = -> { Application::UseCases::RunRowRangeShell.new(stdin: @stdin, stdout: @stdout).call }
       Interface::CLI::MenuLoop.new(
         stdin: @stdin,
         stdout: @stdout,

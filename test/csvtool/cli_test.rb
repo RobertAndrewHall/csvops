@@ -49,6 +49,25 @@ class TestCli < Minitest::Test
     assert_equal "Alice\nBob\nCara\n", output.string
   end
 
+  def test_row_range_workflow_prints_selected_rows
+    output = StringIO.new
+    input = [
+      "2",
+      fixture_path("sample_people.csv"),
+      "2",
+      "3",
+      "3"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "name,city"
+    assert_includes output.string, "Bob,Paris"
+    assert_includes output.string, "Cara,Berlin"
+    refute_includes output.string, "Alice,London"
+  end
+
   def test_end_to_end_file_output_writes_expected_csv
     output = StringIO.new
     output_path = nil
