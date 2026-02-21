@@ -78,40 +78,38 @@ bundle exec rake test
 
 ## Architecture
 
-The CLI is organized into small single-responsibility classes:
+The codebase follows a DDD-lite layered structure:
 
-- `Csvtool::CLI` wires command handling and menu startup.
-- `Csvtool::MenuLoop` handles menu rendering and routing.
-- `Csvtool::ExtractColumnWorkflow` orchestrates extract flow steps.
-- `Csvtool::Prompts::*` classes handle one user prompt each.
-- `Csvtool::Services::*` classes handle CSV domain operations.
-- `Csvtool::Output::*` classes handle output strategies (console/file).
-- `Csvtool::Errors::Presenter` centralizes friendly user-facing errors.
+- `domain/`: core domain model and invariants (`ExtractionSession` aggregate + value objects/entities).
+- `application/`: use-case orchestration (`RunExtraction`).
+- `infrastructure/`: CSV reading/streaming and output adapters (console/file).
+- `interface/cli/`: menu, prompts, and user-facing error presentation.
+- `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
 ## Domain model
 
-The problem domain is "extract values from one selected CSV column with safe interactive controls."
+The core domain is "extract values from one selected CSV column with safe interactive controls."
 
-- `InputFile`: CSV source selected by path + separator.
-- `HeaderSet`: headers discovered from `InputFile`.
-- `SelectedColumn`: one header chosen by filtered interactive selection.
-- `ExtractionPolicy`: options that affect extraction behavior (`skip_blanks`).
+- `ExtractionSession` (aggregate root): owns extraction workflow state and decisions.
+- `CsvSource`: source file path plus separator.
+- `ColumnSelection`: selected header/column name.
+- `ExtractionOptions`: extraction behavior (`skip_blanks`, `preview_limit`).
 - `Preview`: first `N` extracted values shown before execution.
-- `OutputDecision`: user confirmation (`print all?`) plus destination choice (`console` or `file`).
-- `OutputFile`: optional CSV sink for extracted values (single-column CSV with header).
+- `OutputDestination`: destination decision (`console` or `file(path)`).
+- `ExtractionValue`: normalized extracted value object.
 
 ```mermaid
 flowchart TD
-  A["InputFile (path + separator)"] --> B["HeaderSet"]
-  B --> C["SelectedColumn"]
-  C --> D["ExtractionPolicy (skip_blanks)"]
+  A["CsvSource (path + separator)"] --> B["HeaderSet"]
+  B --> C["ColumnSelection"]
+  C --> D["ExtractionOptions (skip_blanks)"]
   D --> E["ValueStream (row-by-row)"]
   E --> F["Preview (first N values)"]
-  F --> G{"Confirm print/write?"}
+  F --> G{"Confirm extraction?"}
   G -->|"No"| H["Cancel + return to menu"]
-  G -->|"Yes"| I{"OutputDecision"}
-  I -->|"Console"| J["ConsoleOutput (stream values)"]
-  I -->|"File"| K["OutputFile CSV (header + one value per row)"]
+  G -->|"Yes"| I["OutputDestination"]
+  I -->|"Console"| J["Console output (stream values)"]
+  I -->|"File"| K["CSV file output (header + one value per row)"]
 ```
 
 ## Project layout
@@ -119,12 +117,13 @@ flowchart TD
 ```text
 bin/tool              # CLI entrypoint
 lib/csvtool/cli.rb
-lib/csvtool/menu_loop.rb
-lib/csvtool/extract_column_workflow.rb
-lib/csvtool/prompts/*            # focused input prompts
-lib/csvtool/services/*           # header read, streaming, preview
-lib/csvtool/output/*             # console/file writers
-lib/csvtool/errors/presenter.rb
+lib/csvtool/domain/extraction_session/*
+lib/csvtool/application/use_cases/run_extraction.rb
+lib/csvtool/infrastructure/csv/*
+lib/csvtool/infrastructure/output/*
+lib/csvtool/interface/cli/menu_loop.rb
+lib/csvtool/interface/cli/prompts/*
+lib/csvtool/interface/cli/errors/presenter.rb
 test/csvtool/cli_test.rb         # end-to-end workflow tests
 test/csvtool/**/*_test.rb        # focused unit tests by component folder
 test/test_helper.rb
