@@ -19,7 +19,13 @@ bundle install
 ### 1. Start the CLI
 
 ```bash
-./bin/tool menu
+csvtool menu
+```
+
+With Bundler:
+
+```bash
+bundle exec csvtool menu
 ```
 
 ### 2. Choose an action
@@ -87,6 +93,20 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
 +Output destination [1]: 2
 +Output file path: /tmp/names.csv
 -Wrote output to /tmp/names.csv
+```
+
+### 6. Direct command mode
+
+Extract a column without using the interactive menu:
+
+```bash
+csvtool column /path/to/file.csv column_name
+```
+
+With Bundler:
+
+```bash
+bundle exec csvtool column /path/to/file.csv column_name
 ```
 
 ## Testing

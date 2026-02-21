@@ -11,11 +11,17 @@ class CliUnitTest < Minitest::Test
     status = Csvtool::CLI.start(["unknown"], stdin: StringIO.new, stdout: stdout, stderr: stderr)
 
     assert_equal 1, status
-    assert_includes stderr.string, "Usage: tool menu"
+    assert_includes stderr.string, "csvtool menu"
+    assert_includes stderr.string, "csvtool column <file> <column>"
   end
 
   def test_menu_command_can_exit_zero
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("2\n"), stdout: StringIO.new, stderr: StringIO.new)
     assert_equal 0, status
+  end
+
+  def test_column_command_requires_file_and_column_args
+    status = Csvtool::CLI.start(["column"], stdin: StringIO.new, stdout: StringIO.new, stderr: StringIO.new)
+    assert_equal 1, status
   end
 end

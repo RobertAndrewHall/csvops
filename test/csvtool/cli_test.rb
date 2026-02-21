@@ -36,6 +36,19 @@ class TestCli < Minitest::Test
     assert_match(/\nAlice\nBob\nCara\n/, output.string)
   end
 
+  def test_column_command_prints_expected_values
+    output = StringIO.new
+    status = Csvtool::CLI.start(
+      ["column", fixture_path("sample_people.csv"), "name"],
+      stdin: StringIO.new,
+      stdout: output,
+      stderr: StringIO.new
+    )
+
+    assert_equal 0, status
+    assert_equal "Alice\nBob\nCara\n", output.string
+  end
+
   def test_end_to_end_file_output_writes_expected_csv
     output = StringIO.new
     output_path = nil
