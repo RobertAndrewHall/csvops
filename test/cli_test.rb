@@ -61,6 +61,7 @@ class TestCli < Minitest::Test
     input = [
       "1",
       fixture_path("sample_people.csv"),
+      "1",
       "",
       "1",
       "2"
@@ -76,6 +77,7 @@ class TestCli < Minitest::Test
     text = output.string
     assert_equal 0, status
     assert_includes text, "CSV file path: "
+    assert_includes text, "Choose separator:"
     assert_includes text, "Select column:"
     assert_includes text, "1. name"
     assert_includes text, "2. city"
@@ -88,6 +90,7 @@ class TestCli < Minitest::Test
     input = [
       "1",
       fixture_path("sample_people.csv"),
+      "1",
       "ci",
       "1",
       "2"
@@ -137,6 +140,7 @@ class TestCli < Minitest::Test
     input = [
       "1",
       fixture_path("empty.csv"),
+      "1",
       "2"
     ].join("\n") + "\n"
 
@@ -159,6 +163,7 @@ class TestCli < Minitest::Test
     input = [
       "1",
       fixture_path("sample_people.csv"),
+      "1",
       "",
       "9",
       "2"
@@ -175,5 +180,35 @@ class TestCli < Minitest::Test
     assert_equal 0, status
     assert_includes text, "Column not found."
     assert_operator text.scan("CSV Tool Menu").length, :>=, 2
+  end
+
+  def test_tsv_separator_choice_extracts_values
+    output = StringIO.new
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(["1", fixture_path("sample_people.tsv"), "2", "", "1", "2"].join("\n") + "\n"),
+      stdout: output,
+      stderr: StringIO.new
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_includes text, "2. tab (\\t)"
+    assert_match(/Column number: Alice\nBob\nCara\n/, text)
+  end
+
+  def test_custom_separator_choice_extracts_values
+    output = StringIO.new
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(["1", fixture_path("sample_people_colon.txt"), "5", ":", "", "1", "2"].join("\n") + "\n"),
+      stdout: output,
+      stderr: StringIO.new
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_includes text, "Custom separator: "
+    assert_match(/Column number: Alice\nBob\nCara\n/, text)
   end
 end

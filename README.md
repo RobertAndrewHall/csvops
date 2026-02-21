@@ -35,6 +35,13 @@ Choose `1` to extract a column:
 
 ```text
 CSV file path: /path/to/file.csv
+Choose separator:
+1. comma (,)
+2. tab (\t)
+3. semicolon (;)
+4. pipe (|)
+5. custom
+Separator choice [1]: 1
 Filter columns (optional):
 Select column:
 1. name

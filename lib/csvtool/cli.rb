@@ -68,7 +68,10 @@ module Csvtool
         return
       end
 
-      headers = read_headers(file_path)
+      col_sep = choose_separator
+      return if col_sep.nil?
+
+      headers = read_headers(file_path, col_sep)
       if headers.empty?
         @stdout.puts "No headers found."
         return
@@ -82,7 +85,7 @@ module Csvtool
         return
       end
 
-      extract_column_values(file_path, column_name).each do |value|
+      extract_column_values(file_path, column_name, col_sep).each do |value|
         @stdout.puts value
       end
     rescue CSV::MalformedCSVError
@@ -121,16 +124,16 @@ module Csvtool
       nil
     end
 
-    def read_headers(file_path)
-      first_row = CSV.open(file_path, "r", headers: true, &:first)
+    def read_headers(file_path, col_sep)
+      first_row = CSV.open(file_path, "r", headers: true, col_sep: col_sep, &:first)
       headers = first_row&.headers || []
       headers.compact.reject(&:empty?)
     end
 
-    def extract_column_values(file_path, column_name)
+    def extract_column_values(file_path, column_name, col_sep)
       values = []
 
-      CSV.foreach(file_path, headers: true) do |row|
+      CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
         values << row[column_name]
       end
 
@@ -138,3 +141,32 @@ module Csvtool
     end
   end
 end
+    def choose_separator
+      @stdout.puts "Choose separator:"
+      @stdout.puts "1. comma (,)"
+      @stdout.puts "2. tab (\\t)"
+      @stdout.puts "3. semicolon (;)"
+      @stdout.puts "4. pipe (|)"
+      @stdout.puts "5. custom"
+      @stdout.print "Separator choice [1]: "
+      choice = @stdin.gets&.strip.to_s
+
+      case choice
+      when "", "1" then ","
+      when "2" then "\t"
+      when "3" then ";"
+      when "4" then "|"
+      when "5"
+        @stdout.print "Custom separator: "
+        custom = @stdin.gets&.strip.to_s
+        if custom.empty?
+          @stdout.puts "Separator cannot be empty."
+          nil
+        else
+          custom
+        end
+      else
+        @stdout.puts "Invalid separator choice."
+        nil
+      end
+    end
