@@ -2,8 +2,8 @@
 
 module Csvtool
   module Domain
-    module ExtractionSession
-      class ExtractionSession
+    module ColumnSession
+      class ColumnSession
         attr_reader :source, :column_selection, :options, :preview, :output_destination
 
         def self.start(source:, column_selection:, options:)

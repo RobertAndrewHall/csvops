@@ -2,7 +2,7 @@
 
 module Csvtool
   module Domain
-    module ExtractionSession
+    module ColumnSession
       class ExtractionOptions
         attr_reader :skip_blanks, :preview_limit
 

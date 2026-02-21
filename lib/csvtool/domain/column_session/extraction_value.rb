@@ -2,7 +2,7 @@
 
 module Csvtool
   module Domain
-    module ExtractionSession
+    module ColumnSession
       class ExtractionValue
         attr_reader :value
 

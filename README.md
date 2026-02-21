@@ -143,7 +143,7 @@ Release runbook:
 
 The codebase follows a DDD-lite layered structure:
 
-- `domain/`: core domain model and invariants (`ExtractionSession` aggregate + value objects/entities).
+- `domain/`: core domain model and invariants (`ColumnSession` aggregate + value objects/entities).
 - `application/`: use-case orchestration (`RunExtraction`).
 - `infrastructure/`: CSV reading/streaming and output adapters (console/file).
 - `interface/cli/`: menu, prompts, and user-facing error presentation.
@@ -155,7 +155,7 @@ Bounded context: `Column Extraction`.
 
 Core DDD structure:
 
-- Aggregate root: `ExtractionSession`
+- Aggregate root: `ColumnSession`
   - Controls extraction state transitions (`start`, `with_preview`, `confirm!`, `with_output_destination`).
   - Enforces session-level invariants.
 - Entities:
@@ -182,7 +182,7 @@ Core DDD structure:
 ```mermaid
 flowchart LR
   UI["Interface CLI\n(Menu + Prompts + Errors)"] --> APP["Application Use Case\nRunExtraction"]
-  APP --> AGG["Domain Aggregate\nExtractionSession"]
+  APP --> AGG["Domain Aggregate\nColumnSession"]
 
   AGG --> E1["Entity\nCsvSource"]
   AGG --> E2["Entity\nColumnSelection"]
@@ -197,7 +197,7 @@ flowchart LR
 ```text
 bin/tool              # CLI entrypoint
 lib/csvtool/cli.rb
-lib/csvtool/domain/extraction_session/*
+lib/csvtool/domain/column_session/*
 lib/csvtool/application/use_cases/run_extraction.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
