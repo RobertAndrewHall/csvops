@@ -35,7 +35,11 @@ Choose `1` to extract a column:
 
 ```text
 CSV file path: /path/to/file.csv
-Column name: name
+Filter columns (optional):
+Select column:
+1. name
+2. city
+Column number: 1
 Alice
 Bob
 Cara

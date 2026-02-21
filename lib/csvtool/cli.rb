@@ -63,12 +63,35 @@ module Csvtool
       @stdout.print "CSV file path: "
       file_path = @stdin.gets&.strip.to_s
 
-      @stdout.print "Column name: "
-      column_name = @stdin.gets&.strip.to_s
+      column_name = choose_column_name(file_path)
+      return if column_name.nil?
 
       extract_column_values(file_path, column_name).each do |value|
         @stdout.puts value
       end
+    end
+
+    def choose_column_name(file_path)
+      headers = CSV.open(file_path, "r", headers: true, &:first)&.headers || []
+
+      @stdout.print "Filter columns (optional): "
+      filter = @stdin.gets&.strip.to_s
+
+      filtered_headers =
+        if filter.empty?
+          headers
+        else
+          headers.select { |header| header.to_s.downcase.include?(filter.downcase) }
+        end
+
+      @stdout.puts "Select column:"
+      filtered_headers.each_with_index do |header, index|
+        @stdout.puts "#{index + 1}. #{header}"
+      end
+      @stdout.print "Column number: "
+
+      selected_index = @stdin.gets&.strip.to_i
+      filtered_headers[selected_index - 1]
     end
 
     def extract_column_values(file_path, column_name)

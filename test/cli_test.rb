@@ -61,7 +61,8 @@ class TestCli < Minitest::Test
     input = [
       "1",
       fixture_path("sample_people.csv"),
-      "name",
+      "",
+      "1",
       "2"
     ].join("\n") + "\n"
 
@@ -75,7 +76,36 @@ class TestCli < Minitest::Test
     text = output.string
     assert_equal 0, status
     assert_includes text, "CSV file path: "
-    assert_includes text, "Column name: "
-    assert_match(/Column name: Alice\nBob\nCara\n/, text)
+    assert_includes text, "Select column:"
+    assert_includes text, "1. name"
+    assert_includes text, "2. city"
+    assert_match(/Column number: Alice\nBob\nCara\n/, text)
+  end
+
+  def test_guided_column_selection_with_filter_prints_selected_column_values
+    output = StringIO.new
+    error = StringIO.new
+    input = [
+      "1",
+      fixture_path("sample_people.csv"),
+      "ci",
+      "1",
+      "2"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(input),
+      stdout: output,
+      stderr: error
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_includes text, "Filter columns (optional): "
+    assert_includes text, "Select column:"
+    assert_includes text, "1. city"
+    refute_includes text, "1. name"
+    assert_match(/Column number: London\nParis\nBerlin\n/, text)
   end
 end
