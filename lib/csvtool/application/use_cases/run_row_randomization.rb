@@ -36,7 +36,6 @@ module Csvtool
           seed = Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if seed == Interface::CLI::Prompts::SeedPrompt::INVALID
 
-          rows = @row_randomizer.call(file_path: file_path, col_sep: col_sep, headers: headers_present, seed: seed)
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
             stdin: @stdin,
             stdout: @stdout,
@@ -44,10 +43,17 @@ module Csvtool
           ).call
           return if output_destination.nil?
 
+          randomized_rows = @row_randomizer.each(
+            file_path: file_path,
+            col_sep: col_sep,
+            headers: headers_present,
+            seed: seed
+          )
+
           if output_destination[:mode] == :file
-            write_output_file(output_destination[:path], headers, rows, col_sep: col_sep)
+            write_output_file(output_destination[:path], headers, randomized_rows, col_sep: col_sep)
           else
-            print_to_console(headers, rows, col_sep: col_sep)
+            print_to_console(headers, randomized_rows, col_sep: col_sep)
           end
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv

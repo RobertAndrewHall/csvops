@@ -228,6 +228,12 @@ flowchart LR
   APP2 --> INFOUT2["Infrastructure Output\nCsvRowConsoleWriter + CsvRowFileWriter"]
 ```
 
+### Row randomization note
+
+- Randomization uses `RAND + sort` with temp chunk files and external merge.
+- This supports large files out of the box without loading all rows at once.
+- Seeded runs are reproducible (`same seed + same input => same output order`).
+
 ## Project layout
 
 ```text

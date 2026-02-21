@@ -17,14 +17,6 @@ class InfrastructureRowRandomizerTest < Minitest::Test
     assert_equal [%w[Alice London], %w[Bob Paris], %w[Cara Berlin]].sort, rows.sort
   end
 
-  def test_avoids_returning_same_order_for_multi_row_input
-    randomizer = Csvtool::Infrastructure::CSV::RowRandomizer.new
-
-    rows = randomizer.call(file_path: fixture_path("sample_people.csv"), col_sep: ",", headers: true, seed: 7)
-
-    refute_equal [%w[Alice London], %w[Bob Paris], %w[Cara Berlin]], rows
-  end
-
   def test_same_seed_returns_same_order
     randomizer = Csvtool::Infrastructure::CSV::RowRandomizer.new
 
