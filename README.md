@@ -46,44 +46,47 @@ Prompt flow:
 
 ### 4. Example interaction (console output)
 
-```text
-CSV file path: /path/to/file.csv
-Choose separator:
-1. comma (,)
-2. tab (\t)
-3. semicolon (;)
-4. pipe (|)
-5. custom
-Separator choice [1]: 1
-Filter columns (optional):
-Select column:
-1. name
-2. city
-Column number: 1
-Skip blank values? [Y/n]:
-Preview (first 3 values):
-Alice
-Bob
-Cara
-Print all values? [y/N]: y
-Output destination:
-1. console
-2. file
-Output destination [1]: 1
-Alice
-Bob
-Cara
+Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
+
+```diff
+ CSV file path: /path/to/file.csv
+ Choose separator:
+ 1. comma (,)
+ 2. tab (\t)
+ 3. semicolon (;)
+ 4. pipe (|)
+ 5. custom
++Separator choice [1]: 1
+ Filter columns (optional):
+ Select column:
+ 1. name
+ 2. city
++Column number: 1
+ Skip blank values? [Y/n]:
+ Preview (first 3 values):
+-Alice
+-Bob
+-Cara
+ Print all values? [y/N]:
++y
+ Output destination:
+ 1. console
+ 2. file
++Output destination [1]: 1
+-Alice
+-Bob
+-Cara
 ```
 
 ### 5. Example interaction (file output)
 
-```text
-Output destination:
-1. console
-2. file
-Output destination [1]: 2
-Output file path: /tmp/names.csv
-Wrote output to /tmp/names.csv
+```diff
+ Output destination:
+ 1. console
+ 2. file
++Output destination [1]: 2
++Output file path: /tmp/names.csv
+-Wrote output to /tmp/names.csv
 ```
 
 ## Testing
