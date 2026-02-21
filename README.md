@@ -48,6 +48,11 @@ Select column:
 2. city
 Column number: 1
 Skip blank values? [Y/n]:
+Preview (first 3 values):
+Alice
+Bob
+Cara
+Print all values? [y/N]: y
 Alice
 Bob
 Cara

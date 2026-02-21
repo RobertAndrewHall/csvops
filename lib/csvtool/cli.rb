@@ -82,6 +82,7 @@ module Csvtool
 
       skip_blanks = choose_skip_blanks
       values = extract_column_values(file_path, column_name, col_sep, skip_blanks: skip_blanks)
+      return unless confirm_print_all_values(values)
 
       values.each { |value| @stdout.puts value }
     rescue CSV::MalformedCSVError
@@ -150,6 +151,19 @@ module Csvtool
       @stdout.print "Skip blank values? [Y/n]: "
       answer = @stdin.gets&.strip.to_s.downcase
       !%w[n no].include?(answer)
+    end
+
+    def confirm_print_all_values(values)
+      preview = values.first(10)
+      @stdout.puts "Preview (first #{preview.length} values):"
+      preview.each { |value| @stdout.puts value }
+      @stdout.print "Print all values? [y/N]: "
+
+      answer = @stdin.gets&.strip.to_s.downcase
+      return true if %w[y yes].include?(answer)
+
+      @stdout.puts "Canceled."
+      false
     end
 
     def read_headers(file_path, col_sep)
