@@ -4,7 +4,8 @@
 
 ## Requirements
 
-- Ruby (tested with Ruby 2.6+)
+- Ruby 3.3.0
+- Bundler
 - `rake`
 - `minitest`
 
