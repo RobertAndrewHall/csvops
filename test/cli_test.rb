@@ -108,4 +108,72 @@ class TestCli < Minitest::Test
     refute_includes text, "1. name"
     assert_match(/Column number: London\nParis\nBerlin\n/, text)
   end
+
+  def test_missing_file_shows_friendly_error_and_returns_to_menu
+    output = StringIO.new
+    error = StringIO.new
+    input = [
+      "1",
+      "/tmp/does-not-exist.csv",
+      "2"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(input),
+      stdout: output,
+      stderr: error
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_includes text, "File not found: /tmp/does-not-exist.csv"
+    assert_operator text.scan("CSV Tool Menu").length, :>=, 2
+  end
+
+  def test_empty_csv_shows_no_headers_message_and_returns_to_menu
+    output = StringIO.new
+    error = StringIO.new
+    input = [
+      "1",
+      fixture_path("empty.csv"),
+      "2"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(input),
+      stdout: output,
+      stderr: error
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_includes text, "No headers found."
+    assert_operator text.scan("CSV Tool Menu").length, :>=, 2
+  end
+
+  def test_invalid_column_selection_shows_column_not_found_and_returns_to_menu
+    output = StringIO.new
+    error = StringIO.new
+    input = [
+      "1",
+      fixture_path("sample_people.csv"),
+      "",
+      "9",
+      "2"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(input),
+      stdout: output,
+      stderr: error
+    )
+
+    text = output.string
+    assert_equal 0, status
+    assert_includes text, "Column not found."
+    assert_operator text.scan("CSV Tool Menu").length, :>=, 2
+  end
 end

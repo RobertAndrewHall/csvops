@@ -63,17 +63,35 @@ module Csvtool
       @stdout.print "CSV file path: "
       file_path = @stdin.gets&.strip.to_s
 
-      column_name = choose_column_name(file_path)
+      unless File.file?(file_path)
+        @stdout.puts "File not found: #{file_path}"
+        return
+      end
+
+      headers = read_headers(file_path)
+      if headers.empty?
+        @stdout.puts "No headers found."
+        return
+      end
+
+      column_name = choose_column_name(headers)
       return if column_name.nil?
+
+      unless headers.include?(column_name)
+        @stdout.puts "Column not found."
+        return
+      end
 
       extract_column_values(file_path, column_name).each do |value|
         @stdout.puts value
       end
+    rescue CSV::MalformedCSVError
+      @stdout.puts "Could not parse CSV file."
+    rescue Errno::EACCES
+      @stdout.puts "Cannot read file: #{file_path}"
     end
 
-    def choose_column_name(file_path)
-      headers = CSV.open(file_path, "r", headers: true, &:first)&.headers || []
-
+    def choose_column_name(headers)
       @stdout.print "Filter columns (optional): "
       filter = @stdin.gets&.strip.to_s
 
@@ -84,6 +102,11 @@ module Csvtool
           headers.select { |header| header.to_s.downcase.include?(filter.downcase) }
         end
 
+      if filtered_headers.empty?
+        @stdout.puts "Column not found."
+        return nil
+      end
+
       @stdout.puts "Select column:"
       filtered_headers.each_with_index do |header, index|
         @stdout.puts "#{index + 1}. #{header}"
@@ -91,7 +114,17 @@ module Csvtool
       @stdout.print "Column number: "
 
       selected_index = @stdin.gets&.strip.to_i
-      filtered_headers[selected_index - 1]
+      selected_header = filtered_headers[selected_index - 1]
+      return selected_header if selected_header
+
+      @stdout.puts "Column not found."
+      nil
+    end
+
+    def read_headers(file_path)
+      first_row = CSV.open(file_path, "r", headers: true, &:first)
+      headers = first_row&.headers || []
+      headers.compact.reject(&:empty?)
     end
 
     def extract_column_values(file_path, column_name)
