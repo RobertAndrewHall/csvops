@@ -3,6 +3,7 @@
 require "csv"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 
 module Csvtool
@@ -20,12 +21,15 @@ module Csvtool
           file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
           return @errors.file_not_found(file_path) unless File.file?(file_path)
 
+          col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+          return if col_sep.nil?
+
           @stdout.print "Start row (1-based, inclusive): "
           start_row_input = @stdin.gets&.strip.to_s
           @stdout.print "End row (1-based, inclusive): "
           end_row_input = @stdin.gets&.strip.to_s
 
-          headers = @header_reader.call(file_path: file_path, col_sep: ",")
+          headers = @header_reader.call(file_path: file_path, col_sep: col_sep)
           return @errors.no_headers if headers.empty?
 
           start_row, end_row = parse_and_validate_range(start_row_input, end_row_input)
@@ -33,7 +37,7 @@ module Csvtool
 
           selected_rows = []
           row_index = 0
-          CSV.foreach(file_path, headers: true, col_sep: ",") do |row|
+          CSV.foreach(file_path, headers: true, col_sep: col_sep) do |row|
             row_index += 1
             next if row_index < start_row
             break if row_index > end_row

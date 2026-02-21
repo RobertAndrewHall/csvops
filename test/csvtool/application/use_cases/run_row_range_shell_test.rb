@@ -7,7 +7,7 @@ class RunRowRangeShellTest < Minitest::Test
   def test_use_case_prints_selected_row_range_with_header
     out = StringIO.new
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "2", "3"].join("\n") + "\n"
+    input = [fixture, "", "2", "3"].join("\n") + "\n"
 
     use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
@@ -21,7 +21,7 @@ class RunRowRangeShellTest < Minitest::Test
   def test_rejects_non_numeric_start_row
     out = StringIO.new
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "abc", "3"].join("\n") + "\n"
+    input = [fixture, "", "abc", "3"].join("\n") + "\n"
 
     use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
@@ -33,7 +33,7 @@ class RunRowRangeShellTest < Minitest::Test
   def test_rejects_non_numeric_end_row
     out = StringIO.new
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "1", "xyz"].join("\n") + "\n"
+    input = [fixture, "", "1", "xyz"].join("\n") + "\n"
 
     use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
@@ -45,7 +45,7 @@ class RunRowRangeShellTest < Minitest::Test
   def test_rejects_end_before_start
     out = StringIO.new
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "3", "2"].join("\n") + "\n"
+    input = [fixture, "", "3", "2"].join("\n") + "\n"
 
     use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
@@ -57,12 +57,38 @@ class RunRowRangeShellTest < Minitest::Test
   def test_handles_out_of_bounds_start_row
     out = StringIO.new
     fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "10", "12"].join("\n") + "\n"
+    input = [fixture, "", "10", "12"].join("\n") + "\n"
 
     use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
     use_case.call
 
     assert_includes out.string, "Row range is out of bounds. File has 3 data rows."
     refute_includes out.string, "name,city"
+  end
+
+  def test_use_case_supports_tsv_separator
+    out = StringIO.new
+    fixture = File.expand_path("../../../fixtures/sample_people.tsv", __dir__)
+    input = [fixture, "2", "2", "3"].join("\n") + "\n"
+
+    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case.call
+
+    assert_includes out.string, "name,city"
+    assert_includes out.string, "Bob,Paris"
+    assert_includes out.string, "Cara,Berlin"
+  end
+
+  def test_use_case_supports_custom_separator
+    out = StringIO.new
+    fixture = File.expand_path("../../../fixtures/sample_people_colon.txt", __dir__)
+    input = [fixture, "5", ":", "2", "3"].join("\n") + "\n"
+
+    use_case = Csvtool::Application::UseCases::RunRowRangeShell.new(stdin: StringIO.new(input), stdout: out)
+    use_case.call
+
+    assert_includes out.string, "name,city"
+    assert_includes out.string, "Bob,Paris"
+    assert_includes out.string, "Cara,Berlin"
   end
 end

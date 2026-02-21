@@ -16,8 +16,10 @@ module Csvtool
           loop do
             print_menu
             @stdout.print "> "
+            choice = @stdin.gets
+            return 0 if choice.nil?
 
-            case @stdin.gets&.strip
+            case choice.strip
             when "1"
               @extract_column_action.call
             when "2"
