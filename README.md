@@ -143,8 +143,8 @@ Release runbook:
 
 The codebase follows a DDD-lite layered structure:
 
-- `domain/`: core domain models and invariants (`ColumnSession` and `RowSession` aggregates + supporting entities/value objects).
-- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`).
+- `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, and `RandomizationSession` aggregates + supporting entities/value objects).
+- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`).
 - `infrastructure/`: CSV reading/streaming and output adapters (console/file).
 - `interface/cli/`: menu, prompts, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
@@ -228,12 +228,37 @@ flowchart LR
   APP2 --> INFOUT2["Infrastructure Output\nCsvRowConsoleWriter + CsvRowFileWriter"]
 ```
 
-### Row randomization note
+### Row Randomization
 
-- Randomization uses `RAND + sort` with temp chunk files and external merge.
-- This supports large files out of the box without loading all rows at once.
-- Seeded runs are reproducible (`same seed + same input => same output order`).
-- Domain context: `Domain::RowRandomizationSession` (`RandomizationSource`, `RandomizationOptions`, `RandomizationOutputDestination`, `RandomizationSession`).
+Core DDD structure:
+
+- Aggregate root: `RandomizationSession`
+  - Captures one randomization request from source + options + output destination.
+- Entity:
+  - `RandomizationSource` (file path + separator + header mode)
+- Value objects:
+  - `RandomizationOptions` (optional deterministic `seed`)
+  - `RandomizationOutputDestination` (`console` or `file(path)`)
+- Application service:
+  - `Application::UseCases::RunRowRandomization` orchestrates row randomization.
+- Infrastructure adapters:
+  - `Infrastructure::CSV::HeaderReader`
+  - `Infrastructure::CSV::RowRandomizer` (external chunked `RAND + sort` + merge)
+- Interface adapters:
+  - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Prompts::*`
+  - `Interface::CLI::Errors::Presenter`
+
+```mermaid
+flowchart LR
+  UI3["Interface CLI\n(Menu + Prompts + Errors)"] --> APP3["Application Use Case\nRunRowRandomization"]
+  APP3 --> AGG3["Domain Aggregate\nRandomizationSession"]
+
+  AGG3 --> E4["Entity\nRandomizationSource"]
+  AGG3 --> V3["Value Objects\nRandomizationOptions / RandomizationOutputDestination"]
+
+  APP3 --> INFCSV3["Infrastructure CSV\nHeaderReader + RowRandomizer"]
+```
 
 ## Project layout
 
@@ -242,8 +267,10 @@ bin/tool              # CLI entrypoint
 lib/csvtool/cli.rb
 lib/csvtool/domain/column_session/*
 lib/csvtool/domain/row_session/*
+lib/csvtool/domain/row_randomization_session/*
 lib/csvtool/application/use_cases/run_extraction.rb
 lib/csvtool/application/use_cases/run_row_extraction.rb
+lib/csvtool/application/use_cases/run_row_randomization.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/interface/cli/menu_loop.rb
