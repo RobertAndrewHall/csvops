@@ -1,74 +1,43 @@
 # frozen_string_literal: true
 
 require "csv"
-require "csvtool/interface/cli/errors/presenter"
-require "csvtool/interface/cli/prompts/file_path_prompt"
-require "csvtool/interface/cli/prompts/separator_prompt"
-require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_streamer"
-require "csvtool/infrastructure/output/csv_row_console_writer"
-require "csvtool/infrastructure/output/csv_row_file_writer"
-require "csvtool/domain/row_session/row_range"
-require "csvtool/domain/row_session/row_source"
-require "csvtool/domain/row_session/row_session"
-require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
     module UseCases
       class RunRowExtraction
-        def initialize(stdin:, stdout:)
-          @stdin = stdin
-          @stdout = stdout
-          @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
-          @header_reader = Infrastructure::CSV::HeaderReader.new
-          @row_streamer = Infrastructure::CSV::RowStreamer.new
+        Result = Struct.new(:ok, :error, :data, keyword_init: true) do
+          def ok?
+            ok
+          end
         end
 
-        def call
-          file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-          return @errors.file_not_found(file_path) unless File.file?(file_path)
+        def initialize(
+          header_reader: Infrastructure::CSV::HeaderReader.new,
+          row_streamer: Infrastructure::CSV::RowStreamer.new
+        )
+          @header_reader = header_reader
+          @row_streamer = row_streamer
+        end
 
-          col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-          return if col_sep.nil?
-          source = Domain::RowSession::RowSource.new(path: file_path, separator: col_sep)
+        def read_headers(file_path:, col_sep:)
+          return failure(:file_not_found, path: file_path) unless File.file?(file_path)
 
-          @stdout.print "Start row (1-based, inclusive): "
-          start_row_input = @stdin.gets&.strip.to_s
-          @stdout.print "End row (1-based, inclusive): "
-          end_row_input = @stdin.gets&.strip.to_s
+          headers = @header_reader.call(file_path: file_path, col_sep: col_sep)
+          return failure(:no_headers) if headers.empty?
 
-          headers = @header_reader.call(file_path: source.path, col_sep: source.separator)
-          return @errors.no_headers if headers.empty?
+          success(headers: headers)
+        rescue CSV::MalformedCSVError
+          failure(:could_not_parse_csv)
+        rescue Errno::EACCES
+          failure(:cannot_read_file, path: file_path)
+        end
 
-          row_range = Domain::RowSession::RowRange.from_inputs(
-            start_row_input: start_row_input,
-            end_row_input: end_row_input
-          )
-          session = Domain::RowSession::RowSession.start(source: source, row_range: row_range)
-
-          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-            stdin: @stdin,
-            stdout: @stdout,
-            errors: @errors
-          ).call
-          return if output_destination.nil?
-          destination =
-            if output_destination[:mode] == :file
-              Domain::Shared::OutputDestination.file(path: output_destination[:path])
-            else
-              Domain::Shared::OutputDestination.console
-            end
-          session = session.with_output_destination(destination)
-
-          stats =
+        def extract(session:, headers:, on_row: nil)
           if session.output_destination.file?
-            Infrastructure::Output::CsvRowFileWriter.new(
-              stdout: @stdout,
-              errors: @errors,
-              row_streamer: @row_streamer
-            ).call(
+            write_file(
               output_path: session.output_destination.path,
               file_path: session.source.path,
               col_sep: session.source.separator,
@@ -77,34 +46,54 @@ module Csvtool
               end_row: session.row_range.end_row
             )
           else
-            Infrastructure::Output::CsvRowConsoleWriter.new(stdout: @stdout, row_streamer: @row_streamer).call(
+            stats = @row_streamer.each_in_range(
               file_path: session.source.path,
               col_sep: session.source.separator,
-              headers: headers,
               start_row: session.row_range.start_row,
               end_row: session.row_range.end_row
-            )
+            ) { |fields| on_row.call(fields) if on_row }
+            success(stats)
           end
-          return if stats.nil?
-
-          @errors.row_range_out_of_bounds(stats[:row_count]) unless stats[:matched]
-        rescue Domain::RowSession::InvalidStartRowError
-          @errors.invalid_start_row
-        rescue Domain::RowSession::InvalidEndRowError
-          @errors.invalid_end_row
-        rescue Domain::RowSession::InvalidRowRangeOrderError
-          @errors.invalid_row_range_order
-        rescue ArgumentError => e
-          return @errors.empty_output_path if e.message == "file output path cannot be empty"
-
-          raise e
         rescue CSV::MalformedCSVError
-          @errors.could_not_parse_csv
+          failure(:could_not_parse_csv)
         rescue Errno::EACCES
-          @errors.cannot_read_file(file_path)
+          failure(:cannot_read_file, path: session.source.path)
         end
-        
+
         private
+
+        def write_file(output_path:, file_path:, col_sep:, headers:, start_row:, end_row:)
+          csv = nil
+          wrote_rows = false
+
+          stats = @row_streamer.each_in_range(
+            file_path: file_path,
+            col_sep: col_sep,
+            start_row: start_row,
+            end_row: end_row
+          ) do |fields|
+            unless wrote_rows
+              csv = ::CSV.open(output_path, "w")
+              csv << headers
+              wrote_rows = true
+            end
+            csv << fields
+          end
+
+          success(stats.merge(wrote_rows: wrote_rows, output_path: output_path))
+        rescue Errno::EACCES, Errno::ENOENT => e
+          failure(:cannot_write_output_file, path: output_path, error_class: e.class)
+        ensure
+          csv&.close unless csv&.closed?
+        end
+
+        def success(data)
+          Result.new(ok: true, error: nil, data: data)
+        end
+
+        def failure(code, data = {})
+          Result.new(ok: false, error: code, data: data)
+        end
       end
     end
   end

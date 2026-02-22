@@ -2,139 +2,94 @@
 
 require_relative "../../../test_helper"
 require "csvtool/application/use_cases/run_row_extraction"
+require "csvtool/domain/row_session/row_source"
+require "csvtool/domain/row_session/row_range"
+require "csvtool/domain/row_session/row_session"
+require "csvtool/domain/shared/output_destination"
 require "tmpdir"
 
 class RunRowExtractionTest < Minitest::Test
-  def test_use_case_prints_selected_row_range_with_header
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "", "2", "3", ""].join("\n") + "\n"
-
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
-
-    assert_includes out.string, "name,city"
-    assert_includes out.string, "Bob,Paris"
-    assert_includes out.string, "Cara,Berlin"
-    refute_includes out.string, "Alice,London"
+  def fixture_path(name)
+    File.expand_path("../../../fixtures/#{name}", __dir__)
   end
 
-  def test_rejects_non_numeric_start_row
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "", "abc", "3", ""].join("\n") + "\n"
+  def build_session(file_path:, separator: ",", start_row:, end_row:, output: :console, output_path: nil)
+    source = Csvtool::Domain::RowSession::RowSource.new(path: file_path, separator: separator)
+    row_range = Csvtool::Domain::RowSession::RowRange.new(start_row: start_row, end_row: end_row)
+    session = Csvtool::Domain::RowSession::RowSession.start(source: source, row_range: row_range)
 
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
-
-    assert_includes out.string, "Start row must be a positive integer."
-    refute_includes out.string, "name,city"
+    session.with_output_destination(
+      if output == :file
+        Csvtool::Domain::Shared::OutputDestination.file(path: output_path)
+      else
+        Csvtool::Domain::Shared::OutputDestination.console
+      end
+    )
   end
 
-  def test_rejects_non_numeric_end_row
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "", "1", "xyz", ""].join("\n") + "\n"
+  def test_read_headers_returns_headers_for_valid_file
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new
 
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
+    result = use_case.read_headers(file_path: fixture_path("sample_people.csv"), col_sep: ",")
 
-    assert_includes out.string, "End row must be a positive integer."
-    refute_includes out.string, "name,city"
+    assert result.ok?
+    assert_equal ["name", "city"], result.data[:headers]
   end
 
-  def test_rejects_end_before_start
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "", "3", "2", ""].join("\n") + "\n"
+  def test_read_headers_fails_when_file_is_missing
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new
 
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
+    result = use_case.read_headers(file_path: "/tmp/not-present.csv", col_sep: ",")
 
-    assert_includes out.string, "End row must be greater than or equal to start row."
-    refute_includes out.string, "name,city"
+    refute result.ok?
+    assert_equal :file_not_found, result.error
   end
 
-  def test_handles_out_of_bounds_start_row
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-    input = [fixture, "", "10", "12", ""].join("\n") + "\n"
+  def test_extract_streams_rows_for_console_mode
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new
+    session = build_session(file_path: fixture_path("sample_people.csv"), start_row: 2, end_row: 3)
+    headers = ["name", "city"]
+    rows = []
 
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
+    result = use_case.extract(session: session, headers: headers, on_row: ->(fields) { rows << fields })
 
-    assert_includes out.string, "Row range is out of bounds. File has 3 data rows."
-    refute_includes out.string, "name,city"
+    assert result.ok?
+    assert_equal true, result.data[:matched]
+    assert_equal 3, result.data[:row_count]
+    assert_equal [["Bob", "Paris"], ["Cara", "Berlin"]], rows
   end
 
-  def test_use_case_supports_tsv_separator
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.tsv", __dir__)
-    input = [fixture, "2", "2", "3", ""].join("\n") + "\n"
-
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
-
-    assert_includes out.string, "name,city"
-    assert_includes out.string, "Bob,Paris"
-    assert_includes out.string, "Cara,Berlin"
-  end
-
-  def test_use_case_supports_custom_separator
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people_colon.txt", __dir__)
-    input = [fixture, "5", ":", "2", "3", ""].join("\n") + "\n"
-
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
-
-    assert_includes out.string, "name,city"
-    assert_includes out.string, "Bob,Paris"
-    assert_includes out.string, "Cara,Berlin"
-  end
-
-  def test_use_case_can_write_selected_rows_to_file
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
+  def test_extract_writes_rows_to_file_mode
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new
+    headers = ["name", "city"]
 
     Dir.mktmpdir do |dir|
       output_path = File.join(dir, "rows.csv")
-      input = [fixture, "", "2", "3", "2", output_path].join("\n") + "\n"
+      session = build_session(
+        file_path: fixture_path("sample_people.csv"),
+        start_row: 2,
+        end_row: 3,
+        output: :file,
+        output_path: output_path
+      )
 
-      use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-      use_case.call
+      result = use_case.extract(session: session, headers: headers)
 
+      assert result.ok?
+      assert_equal true, result.data[:wrote_rows]
       assert_equal "name,city\nBob,Paris\nCara,Berlin\n", File.read(output_path)
-      assert_includes out.string, "Wrote output to #{output_path}"
     end
   end
 
-  def test_stops_parsing_after_end_row_for_console_output
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people_bad_tail.csv", __dir__)
-    input = [fixture, "", "1", "2", ""].join("\n") + "\n"
+  def test_extract_reports_out_of_bounds_via_stats
+    use_case = Csvtool::Application::UseCases::RunRowExtraction.new
+    session = build_session(file_path: fixture_path("sample_people.csv"), start_row: 10, end_row: 12)
+    headers = ["name", "city"]
 
-    use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-    use_case.call
+    result = use_case.extract(session: session, headers: headers)
 
-    assert_includes out.string, "name,city"
-    assert_includes out.string, "Alice,London"
-    assert_includes out.string, "Bob,Paris"
-    refute_includes out.string, "Could not parse CSV file."
-  end
-
-  def test_out_of_bounds_file_mode_reports_error
-    out = StringIO.new
-    fixture = File.expand_path("../../../fixtures/sample_people.csv", __dir__)
-
-    Dir.mktmpdir do |dir|
-      output_path = File.join(dir, "rows.csv")
-      input = [fixture, "", "10", "12", "2", output_path].join("\n") + "\n"
-
-      use_case = Csvtool::Application::UseCases::RunRowExtraction.new(stdin: StringIO.new(input), stdout: out)
-      use_case.call
-    end
-
-    assert_includes out.string, "Row range is out of bounds. File has 3 data rows."
+    assert result.ok?
+    assert_equal false, result.data[:matched]
+    assert_equal 3, result.data[:row_count]
   end
 end
