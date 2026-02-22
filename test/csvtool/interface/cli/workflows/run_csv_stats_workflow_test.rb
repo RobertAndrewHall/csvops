@@ -82,4 +82,30 @@ class RunCsvStatsWorkflowTest < Minitest::Test
     assert_includes out.string, "name: non_blank=3 blank=2"
     assert_includes out.string, "city: non_blank=4 blank=1"
   end
+
+  def test_workflow_reports_missing_file
+    out = StringIO.new
+    input = ["/tmp/does-not-exist.csv", "", ""].join("\n") + "\n"
+
+    Csvtool::Interface::CLI::Workflows::RunCsvStatsWorkflow.new(
+      stdin: StringIO.new(input),
+      stdout: out
+    ).call
+
+    assert_includes out.string, "File not found: /tmp/does-not-exist.csv"
+    refute_includes out.string, "Traceback"
+  end
+
+  def test_workflow_reports_parse_error
+    out = StringIO.new
+    input = [fixture_path("sample_people_bad_tail.csv"), "", ""].join("\n") + "\n"
+
+    Csvtool::Interface::CLI::Workflows::RunCsvStatsWorkflow.new(
+      stdin: StringIO.new(input),
+      stdout: out
+    ).call
+
+    assert_includes out.string, "Could not parse CSV file."
+    refute_includes out.string, "Traceback"
+  end
 end
