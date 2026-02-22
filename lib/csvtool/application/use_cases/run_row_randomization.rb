@@ -1,103 +1,87 @@
 # frozen_string_literal: true
 
 require "csv"
-require "csvtool/interface/cli/errors/presenter"
-require "csvtool/interface/cli/prompts/file_path_prompt"
-require "csvtool/interface/cli/prompts/separator_prompt"
-require "csvtool/interface/cli/prompts/headers_present_prompt"
-require "csvtool/interface/cli/prompts/seed_prompt"
-require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_randomizer"
-require "csvtool/domain/row_randomization_session/randomization_source"
-require "csvtool/domain/row_randomization_session/randomization_options"
-require "csvtool/domain/row_randomization_session/randomization_session"
-require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
     module UseCases
       class RunRowRandomization
-        def initialize(stdin:, stdout:)
-          @stdin = stdin
-          @stdout = stdout
-          @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
-          @header_reader = Infrastructure::CSV::HeaderReader.new
-          @row_randomizer = Infrastructure::CSV::RowRandomizer.new
+        Result = Struct.new(:ok, :error, :data, keyword_init: true) do
+          def ok?
+            ok
+          end
         end
 
-        def call
-          file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-          return @errors.file_not_found(file_path) unless File.file?(file_path)
+        def initialize(
+          header_reader: Infrastructure::CSV::HeaderReader.new,
+          row_randomizer: Infrastructure::CSV::RowRandomizer.new
+        )
+          @header_reader = header_reader
+          @row_randomizer = row_randomizer
+        end
 
-          col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-          return if col_sep.nil?
+        def read_headers(file_path:, col_sep:, headers_present:)
+          return failure(:file_not_found, path: file_path) unless File.file?(file_path)
 
-          headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout).call
-          source = Domain::RowRandomizationSession::RandomizationSource.new(
-            path: file_path,
-            separator: col_sep,
-            headers_present: headers_present
-          )
-          headers = source.headers_present? ? @header_reader.call(file_path: source.path, col_sep: source.separator) : nil
-          return @errors.no_headers if source.headers_present? && headers.empty?
+          headers = nil
+          if headers_present
+            headers = @header_reader.call(file_path: file_path, col_sep: col_sep)
+            return failure(:no_headers) if headers.empty?
+          end
 
-          seed = Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-          return if seed == Interface::CLI::Prompts::SeedPrompt::INVALID
-          options = Domain::RowRandomizationSession::RandomizationOptions.new(seed: seed)
-          session = Domain::RowRandomizationSession::RandomizationSession.start(source: source, options: options)
+          success(headers: headers)
+        rescue CSV::MalformedCSVError
+          failure(:could_not_parse_csv)
+        rescue Errno::EACCES
+          failure(:cannot_read_file, path: file_path)
+        end
 
-          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-            stdin: @stdin,
-            stdout: @stdout,
-            errors: @errors
-          ).call
-          return if output_destination.nil?
-          destination =
-            if output_destination[:mode] == :file
-              Domain::Shared::OutputDestination.file(path: output_destination[:path])
-            else
-              Domain::Shared::OutputDestination.console
-            end
-          session = session.with_output_destination(destination)
-
-          randomized_rows = @row_randomizer.each(
-            file_path: session.source.path,
-            col_sep: session.source.separator,
-            headers: session.source.headers_present?,
-            seed: session.options.seed
-          )
-
+        def randomize(session:, headers:, on_row: nil)
           if session.output_destination.file?
-            write_output_file(session.output_destination.path, headers, randomized_rows, col_sep: session.source.separator)
+            write_file(
+              path: session.output_destination.path,
+              headers: headers,
+              file_path: session.source.path,
+              col_sep: session.source.separator,
+              headers_present: session.source.headers_present?,
+              seed: session.options.seed
+            )
           else
-            print_to_console(headers, randomized_rows, col_sep: session.source.separator)
+            @row_randomizer.each(
+              file_path: session.source.path,
+              col_sep: session.source.separator,
+              headers: session.source.headers_present?,
+              seed: session.options.seed
+            ) { |fields| on_row.call(fields) if on_row }
+            success({})
           end
         rescue CSV::MalformedCSVError
-          @errors.could_not_parse_csv
-        rescue ArgumentError => e
-          return @errors.empty_output_path if e.message == "file output path cannot be empty"
-
-          raise e
+          failure(:could_not_parse_csv)
         rescue Errno::EACCES
-          @errors.cannot_read_file(file_path)
+          failure(:cannot_read_file, path: session.source.path)
         end
 
         private
 
-        def print_to_console(headers, rows, col_sep:)
-          @stdout.puts
-          @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: col_sep).chomp if headers
-          rows.each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: col_sep).chomp }
+        def write_file(path:, headers:, file_path:, col_sep:, headers_present:, seed:)
+          ::CSV.open(path, "w", write_headers: !headers.nil?, headers: headers, col_sep: col_sep) do |csv|
+            @row_randomizer.each(file_path: file_path, col_sep: col_sep, headers: headers_present, seed: seed) do |fields|
+              csv << fields
+            end
+          end
+          success(output_path: path)
+        rescue Errno::EACCES, Errno::ENOENT => e
+          failure(:cannot_write_output_file, path: path, error_class: e.class)
         end
 
-        def write_output_file(path, headers, rows, col_sep:)
-          ::CSV.open(path, "w", write_headers: !headers.nil?, headers: headers, col_sep: col_sep) do |csv|
-            rows.each { |fields| csv << fields }
-          end
-          @stdout.puts "Wrote output to #{path}"
-        rescue Errno::EACCES, Errno::ENOENT => e
-          @errors.cannot_write_output_file(path, e.class)
+        def success(data)
+          Result.new(ok: true, error: nil, data: data)
+        end
+
+        def failure(code, data = {})
+          Result.new(ok: false, error: code, data: data)
         end
       end
     end
