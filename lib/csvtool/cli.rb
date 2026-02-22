@@ -11,6 +11,7 @@ require "csvtool/interface/cli/workflows/run_csv_parity_workflow"
 require "csvtool/interface/cli/workflows/run_csv_split_workflow"
 require "csvtool/interface/cli/workflows/run_csv_stats_workflow"
 require "csvtool/interface/cli/errors/presenter"
+require "csvtool/interface/cli/output/table_renderer"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
 require "csvtool/infrastructure/output/console_writer"
@@ -197,15 +198,26 @@ module Csvtool
         end
       else
         use_color = color_enabled?(color_mode)
+        table_renderer = Interface::CLI::Output::TableRenderer.new
+        max_width = terminal_width
         @stdout.puts colorize("CSV Stats Summary", code: "1;36", enabled: use_color)
-        @stdout.puts "#{colorize('Rows', code: '1', enabled: use_color)}: #{data[:row_count]}"
-        @stdout.puts "#{colorize('Columns', code: '1', enabled: use_color)}: #{data[:column_count]}"
-        @stdout.puts "#{colorize('Headers', code: '1', enabled: use_color)}: #{data[:headers].join(', ')}" unless data[:headers].nil? || data[:headers].empty?
+        summary_rows = [
+          ["Rows", data[:row_count].to_s],
+          ["Columns", data[:column_count].to_s]
+        ]
+        summary_rows << ["Headers", data[:headers].join(", ")] unless data[:headers].nil? || data[:headers].empty?
+        @stdout.puts table_renderer.render(headers: ["Metric", "Value"], rows: summary_rows, max_width: max_width)
         if data[:column_stats] && !data[:column_stats].empty?
+          @stdout.puts
           @stdout.puts colorize("Column completeness:", code: "1", enabled: use_color)
-          data[:column_stats].each do |stats|
-            @stdout.puts "  #{stats[:name]}: non_blank=#{stats[:non_blank_count]} blank=#{stats[:blank_count]}"
+          rows = data[:column_stats].map do |stats|
+            [stats[:name], stats[:non_blank_count].to_s, stats[:blank_count].to_s]
           end
+          @stdout.puts table_renderer.render(
+            headers: ["Column", "Non-blank", "Blank"],
+            rows: rows,
+            max_width: max_width
+          )
         end
       end
     end
@@ -222,6 +234,14 @@ module Csvtool
       return text unless enabled
 
       "\e[#{code}m#{text}\e[0m"
+    end
+
+    def terminal_width
+      columns = @env["COLUMNS"].to_i
+      return columns if columns.positive?
+      return @stdout.winsize[1] if @stdout.respond_to?(:winsize)
+
+      80
     end
   end
 end

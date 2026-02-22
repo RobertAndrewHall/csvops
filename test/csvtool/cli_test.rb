@@ -173,9 +173,10 @@ class TestCli < Minitest::Test
 
     assert_equal 0, status
     assert_includes stdout.string, "CSV Stats Summary"
-    assert_includes stdout.string, "Rows: 3"
-    assert_includes stdout.string, "Columns: 2"
-    assert_includes stdout.string, "Headers: name, city"
+    assert_includes stdout.string, "Metric"
+    assert_includes stdout.string, "Rows"
+    assert_includes stdout.string, "Columns"
+    assert_includes stdout.string, "Headers"
     assert_equal "", stderr.string
   end
 
@@ -344,6 +345,30 @@ class TestCli < Minitest::Test
     assert_equal 1, status
     assert_equal "", stdout.string
     assert_includes stderr.string, "Invalid color mode: sometimes"
+  end
+
+  def test_stats_command_table_respects_narrow_terminal_width
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "long_headers.csv")
+      File.write(path, "very_long_column_name,another_really_long_column_name\nvalue_a,value_b\n")
+
+      status = Csvtool::CLI.start(
+        ["stats", path],
+        stdin: StringIO.new,
+        stdout: stdout,
+        stderr: stderr,
+        env: { "COLUMNS" => "32" }
+      )
+
+      assert_equal 0, status
+      lines = stdout.string.lines.map(&:chomp)
+      assert lines.all? { |line| line.length <= 32 }
+      assert_includes stdout.string, "..."
+      assert_equal "", stderr.string
+    end
   end
 
   def test_row_range_workflow_prints_selected_rows

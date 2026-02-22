@@ -118,6 +118,22 @@ With Bundler:
 bundle exec csvtool column /path/to/file.csv column_name
 ```
 
+Get CSV stats directly (default text output):
+
+```bash
+csvtool stats /path/to/file.csv
+```
+
+Optional output format and color mode:
+
+```bash
+csvtool stats /path/to/file.csv --format json
+csvtool stats /path/to/file.csv --format csv
+csvtool stats /path/to/file.csv --color auto
+csvtool stats /path/to/file.csv --color always
+csvtool stats /path/to/file.csv --color never
+```
+
 ### 7. Dedupe interaction example
 
 Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
