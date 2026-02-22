@@ -35,11 +35,13 @@ bundle exec csvtool menu
 CSV Tool Menu
 1. Extract column
 2. Extract rows (range)
-3. Exit
+3. Randomize rows
+4. Dedupe using another CSV
+5. Exit
 >
 ```
 
-Select `1` to run extraction.
+Select `1` for column extraction, `2` for row-range extraction, `3` for row randomization, or `4` for cross-CSV dedupe.
 
 ### 3. Follow prompts
 
@@ -109,6 +111,53 @@ With Bundler:
 
 ```bash
 bundle exec csvtool column /path/to/file.csv column_name
+```
+
+### 7. Dedupe interaction example
+
+Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
+
+```diff
+ CSV Tool Menu
+ 1. Extract column
+ 2. Extract rows (range)
+ 3. Randomize rows
+ 4. Dedupe using another CSV
+ 5. Exit
++> 4
+ CSV file path: /tmp/source.csv
+ Source CSV separator:
+ Choose separator:
+ 1. comma (,)
+ 2. tab (\t)
+ 3. semicolon (;)
+ 4. pipe (|)
+ 5. custom
++Separator choice [1]: 1
+ Source headers present? [Y/n]:
+ Reference CSV file path: /tmp/reference.csv
+ Reference CSV separator:
+ Choose separator:
+ 1. comma (,)
+ 2. tab (\t)
+ 3. semicolon (;)
+ 4. pipe (|)
+ 5. custom
++Separator choice [1]: 1
+ Reference headers present? [Y/n]:
+ Source key column name: customer_id
+ Reference key column name: external_id
+ Trim whitespace before matching? [Y/n]:
+ Case-insensitive matching? [y/N]:
+ Output destination:
+ 1. console
+ 2. file
++Output destination [1]: 1
+-
+-customer_id,name
+-1,Alice
+-3,Cara
+-Summary: source_rows=5 removed_rows=3 kept_rows=2
 ```
 
 ## Testing
