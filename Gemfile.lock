@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    csvops (0.5.0.alpha)
+    csvops (0.6.0.alpha)
       csv (~> 3.3)
 
 GEM
@@ -24,7 +24,7 @@ DEPENDENCIES
 
 CHECKSUMS
   csv (3.3.0) sha256=0bbd1defdc31134abefed027a639b3723c2753862150f4c3ee61cab71b20d67d
-  csvops (0.5.0.alpha)
+  csvops (0.6.0.alpha)
   minitest (6.0.1) sha256=7854c74f48e2e975969062833adc4013f249a4b212f5e7b9d5c040bf838d54bb
   prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
   rake (13.3.1) sha256=8c9e89d09f66a26a01264e7e3480ec0607f0c497a861ef16063604b1b08eb19c
