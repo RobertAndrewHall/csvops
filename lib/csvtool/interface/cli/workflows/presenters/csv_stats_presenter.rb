@@ -14,9 +14,13 @@ module Csvtool
               @stdout.puts "CSV Stats Summary"
               @stdout.puts "Rows: #{data[:row_count]}"
               @stdout.puts "Columns: #{data[:column_count]}"
-              return if data[:headers].nil? || data[:headers].empty?
+              @stdout.puts "Headers: #{data[:headers].join(', ')}" unless data[:headers].nil? || data[:headers].empty?
+              return if data[:column_stats].nil? || data[:column_stats].empty?
 
-              @stdout.puts "Headers: #{data[:headers].join(', ')}"
+              @stdout.puts "Column completeness:"
+              data[:column_stats].each do |stats|
+                @stdout.puts "  #{stats[:name]}: non_blank=#{stats[:non_blank_count]} blank=#{stats[:blank_count]}"
+              end
             end
           end
         end
