@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "csv"
+require "csvtool/interface/cli/output/formatters/csv_row_formatter"
 
 module Csvtool
   module Interface
@@ -8,19 +8,20 @@ module Csvtool
       module Workflows
         module Presenters
           class RowRandomizationPresenter
-            def initialize(stdout:, headers:, col_sep:)
+            def initialize(stdout:, headers:, col_sep:, row_formatter: Output::Formatters::CsvRowFormatter.new)
               @stdout = stdout
               @headers = headers
               @col_sep = col_sep
+              @row_formatter = row_formatter
             end
 
             def print_console_start
               @stdout.puts
-              @stdout.puts ::CSV.generate_line(@headers, row_sep: "", col_sep: @col_sep).chomp if @headers
+              @stdout.puts @row_formatter.call(fields: @headers, col_sep: @col_sep) if @headers
             end
 
             def print_row(fields)
-              @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: @col_sep).chomp
+              @stdout.puts @row_formatter.call(fields: fields, col_sep: @col_sep)
             end
 
             def print_file_written(path)

@@ -13,6 +13,7 @@ require "csvtool/interface/cli/workflows/run_csv_stats_workflow"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/output/table_renderer"
 require "csvtool/interface/cli/output/streams"
+require "csvtool/interface/cli/output/formatters/stats_formatter"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
 require "csvtool/infrastructure/output/console_writer"
@@ -158,7 +159,11 @@ module Csvtool
         return 1
       end
 
-      print_stats(result.data, format: format, color_mode: color_mode)
+      formatter = Interface::CLI::Output::Formatters::StatsFormatter.new(
+        table_renderer: Interface::CLI::Output::TableRenderer.new
+      )
+      output = formatter.call(data: result.data, format: format, max_width: terminal_width)
+      print_stats_output(output, format: format, color_mode: color_mode)
 
       0
     end
@@ -186,43 +191,32 @@ module Csvtool
       [file_path, format, color_mode]
     end
 
-    def print_stats(data, format:, color_mode:)
-      case format
-      when "json"
-        @stdout.puts JSON.generate(data)
-      when "csv"
-        @stdout.puts "metric,value"
-        @stdout.puts "row_count,#{data[:row_count]}"
-        @stdout.puts "column_count,#{data[:column_count]}"
-        @stdout.puts "headers,#{data[:headers].join('|')}" unless data[:headers].nil? || data[:headers].empty?
-        data.fetch(:column_stats, []).each do |stats|
-          @stdout.puts "column.#{stats[:name]}.non_blank,#{stats[:non_blank_count]}"
-          @stdout.puts "column.#{stats[:name]}.blank,#{stats[:blank_count]}"
-        end
-      else
+    def print_stats_output(output, format:, color_mode:)
+      if format == "text"
         use_color = color_enabled?(color_mode)
-        table_renderer = Interface::CLI::Output::TableRenderer.new
-        max_width = terminal_width
-        @stdout.puts colorize("CSV Stats Summary", code: "1;36", enabled: use_color)
-        summary_rows = [
-          ["Rows", data[:row_count].to_s],
-          ["Columns", data[:column_count].to_s]
-        ]
-        summary_rows << ["Headers", data[:headers].join(", ")] unless data[:headers].nil? || data[:headers].empty?
-        @stdout.puts table_renderer.render(headers: ["Metric", "Value"], rows: summary_rows, max_width: max_width)
-        if data[:column_stats] && !data[:column_stats].empty?
-          @stdout.puts
-          @stdout.puts colorize("Column completeness:", code: "1", enabled: use_color)
-          rows = data[:column_stats].map do |stats|
-            [stats[:name], stats[:non_blank_count].to_s, stats[:blank_count].to_s]
-          end
-          @stdout.puts table_renderer.render(
-            headers: ["Column", "Non-blank", "Blank"],
-            rows: rows,
-            max_width: max_width
-          )
-        end
+        text = apply_text_color(output, enabled: use_color)
+        @stdout.puts text
+      else
+        @stdout.puts output
       end
+    end
+
+    def apply_text_color(text, enabled:)
+      return text unless enabled
+
+      text.lines.map do |line|
+        line = line.chomp
+        case line
+        when "CSV Stats Summary"
+          colorize(line, code: "1;36", enabled: true)
+        when "Column completeness:"
+          colorize(line, code: "1", enabled: true)
+        when /\A(Metric|Value|Column|Non-blank|Blank)(\s+\|.*)?\z/
+          colorize(line, code: "1", enabled: true)
+        else
+          line
+        end
+      end.join("\n")
     end
 
     def color_enabled?(mode)
