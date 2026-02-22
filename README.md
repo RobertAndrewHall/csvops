@@ -48,23 +48,16 @@ Select `1` for column extraction, `2` for row-range extraction, `3` for row rand
 
 ### 3. Follow prompts
 
-Each menu action runs through a dedicated CLI workflow (`interface/cli/workflows/*`) that handles prompts/output and delegates execution to an interface-agnostic application use case.
+Each action asks only for what it needs (file path, separator, and any action-specific options), then prints results to the console or writes to a file when selected.
 
-Workflow internals are split into small composable parts:
+Typical prompt pattern:
 
-- `workflows/builders/*` for session construction
-- `workflows/support/*` for shared mapping/dispatch utilities
-- `workflows/presenters/*` for output formatting and summaries
+- choose source file(s)
+- choose separator/header options when relevant
+- choose action-specific options
+- choose output destination (console or file)
 
-Prompt flow by action:
-
-- `Extract column`: file path, separator, optional header filter + column select, skip blanks, preview/confirm, output destination.
-- `Extract rows (range)`: file path, separator, start row, end row, output destination.
-- `Randomize rows`: file path, separator, headers present, optional seed, output destination.
-- `Dedupe using another CSV`: source/reference files, separators, header modes, key selectors, match options, output destination.
-- `Validate parity`: left/right files, separator, header mode, parity summary, mismatch samples.
-- `Split CSV into chunks`: source file, separator, header mode, chunk size, output directory/prefix, overwrite policy, optional manifest.
-- `CSV stats summary`: source file, separator, header mode, output destination.
+For architecture and internal design details, see [`docs/architecture.md`](docs/architecture.md).
 
 ### 4. Example interaction (console output)
 
