@@ -6,11 +6,14 @@ require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/chunk_size_prompt"
+require "csvtool/interface/cli/prompts/yes_no_prompt"
+require "csvtool/interface/cli/prompts/split_output_prompt"
 require "csvtool/interface/cli/workflows/builders/csv_split_session_builder"
 require "csvtool/interface/cli/workflows/presenters/csv_split_presenter"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/interface/cli/workflows/steps/workflow_step_pipeline"
 require "csvtool/interface/cli/workflows/steps/csv_split/collect_inputs_step"
+require "csvtool/interface/cli/workflows/steps/csv_split/collect_output_step"
 require "csvtool/interface/cli/workflows/steps/csv_split/build_session_step"
 require "csvtool/interface/cli/workflows/steps/csv_split/execute_step"
 
@@ -43,6 +46,13 @@ module Csvtool
                 headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
                 chunk_size_prompt: Interface::CLI::Prompts::ChunkSizePrompt.new(stdin: @stdin, stdout: @stdout)
               ),
+              Steps::CsvSplit::CollectOutputStep.new(
+                split_output_prompt: Interface::CLI::Prompts::SplitOutputPrompt.new(
+                  stdin: @stdin,
+                  stdout: @stdout,
+                  yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout)
+                )
+              ),
               Steps::CsvSplit::BuildSessionStep.new,
               Steps::CsvSplit::ExecuteStep.new
             ])
@@ -58,7 +68,8 @@ module Csvtool
               no_headers: ->(_r, errors) { errors.no_headers },
               could_not_parse_csv: ->(_r, errors) { errors.could_not_parse_csv },
               cannot_read_file: ->(r, errors) { errors.cannot_read_file(r.data[:path]) },
-              cannot_write_output_file: ->(r, errors) { errors.cannot_write_output_file(r.data[:path], r.data[:error_class]) }
+              cannot_write_output_file: ->(r, errors) { errors.cannot_write_output_file(r.data[:path], r.data[:error_class]) },
+              output_file_exists: ->(r, errors) { errors.output_file_exists(r.data[:path]) }
             })
           end
         end

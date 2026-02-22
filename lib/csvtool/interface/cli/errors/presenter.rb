@@ -33,6 +33,10 @@ module Csvtool
             @stdout.puts "Cannot write output file: #{path} (#{error_class})"
           end
 
+          def output_file_exists(path)
+            @stdout.puts "Output file already exists: #{path}"
+          end
+
           def empty_output_path
             @stdout.puts "Output file path cannot be empty."
           end

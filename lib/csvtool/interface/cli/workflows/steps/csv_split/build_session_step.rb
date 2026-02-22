@@ -14,7 +14,8 @@ module Csvtool
                   headers_present: context.fetch(:headers_present),
                   chunk_size: context.fetch(:chunk_size),
                   output_directory: context[:output_directory],
-                  file_prefix: context[:file_prefix]
+                  file_prefix: context[:file_prefix],
+                  overwrite_existing: context.fetch(:overwrite_existing, false)
                 )
                 nil
               end

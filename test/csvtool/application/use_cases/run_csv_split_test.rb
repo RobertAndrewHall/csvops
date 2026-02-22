@@ -49,4 +49,24 @@ class RunCsvSplitTest < Minitest::Test
       assert_equal "Name25,City25", chunk_3[5]
     end
   end
+
+  def test_returns_output_file_exists_when_overwrite_is_disabled
+    use_case = Csvtool::Application::UseCases::RunCsvSplit.new
+
+    Dir.mktmpdir do |dir|
+      source_path = File.join(dir, "people.csv")
+      FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
+      File.write(File.join(dir, "people_part_001.csv"), "sentinel\n")
+
+      source = Csvtool::Domain::CsvSplitSession::SplitSource.new(path: source_path, separator: ",", headers_present: true)
+      options = Csvtool::Domain::CsvSplitSession::SplitOptions.new(chunk_size: 10, overwrite_existing: false)
+      session = Csvtool::Domain::CsvSplitSession::SplitSession.start(source: source, options: options)
+
+      result = use_case.call(session: session)
+
+      refute result.ok?
+      assert_equal :output_file_exists, result.error
+      assert_equal File.join(dir, "people_part_001.csv"), result.data[:path]
+    end
+  end
 end

@@ -47,9 +47,12 @@ module Csvtool
             headers_present: source.headers_present,
             chunk_size: session.options.chunk_size,
             output_directory: output_directory,
-            file_prefix: file_prefix
+            file_prefix: file_prefix,
+            overwrite_existing: session.options.overwrite_existing
           )
           success(stats.merge(output_directory: output_directory, file_prefix: file_prefix))
+        rescue Infrastructure::CSV::CsvSplitter::OutputFileExistsError => e
+          failure(:output_file_exists, path: e.path)
         rescue CSV::MalformedCSVError
           failure(:could_not_parse_csv)
         rescue Errno::EACCES, Errno::ENOENT => e

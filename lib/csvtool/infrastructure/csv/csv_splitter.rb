@@ -6,7 +6,16 @@ module Csvtool
   module Infrastructure
     module CSV
       class CsvSplitter
-        def call(file_path:, col_sep:, headers_present:, chunk_size:, output_directory:, file_prefix:)
+        class OutputFileExistsError < StandardError
+          attr_reader :path
+
+          def initialize(path)
+            super("output file exists: #{path}")
+            @path = path
+          end
+        end
+
+        def call(file_path:, col_sep:, headers_present:, chunk_size:, output_directory:, file_prefix:, overwrite_existing:)
           ext = File.extname(file_path)
           ext = ".csv" if ext.empty?
           sequence = 0
@@ -24,6 +33,8 @@ module Csvtool
               sequence += 1
               rows_in_chunk = 0
               path = File.join(output_directory, format("%<prefix>s_part_%<num>03d%<ext>s", prefix: file_prefix, num: sequence, ext: ext))
+              raise OutputFileExistsError.new(path) if File.exist?(path) && !overwrite_existing
+
               chunk_paths << path
               write_mode_headers = headers_present ? row.headers : nil
               current_csv = ::CSV.open(path, "w", write_headers: write_headers, headers: write_mode_headers, col_sep: col_sep)
