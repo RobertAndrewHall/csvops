@@ -143,15 +143,15 @@ Release runbook:
 
 The codebase follows a DDD-lite layered structure:
 
-- `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, and `RandomizationSession` aggregates + supporting entities/value objects).
-- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`).
-- `infrastructure/`: CSV reading/streaming and output adapters (console/file).
+- `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, `RandomizationSession`, and `CrossCsvDedupeSession` aggregates + supporting entities/value objects).
+- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`).
+- `infrastructure/`: CSV reading/streaming and output adapters (console/file), plus cross-CSV dedupe adapter.
 - `interface/cli/`: menu, prompts, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
 ## Domain model
 
-Bounded contexts: `Column Extraction`, `Row Extraction`, and `Row Randomization`.
+Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, and `Cross-CSV Dedupe`.
 
 ### Cross-CSV Dedupe (Large-file behavior)
 
@@ -176,7 +176,7 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, and `Row Randomization`
   - `ExtractionOptions` (`skip_blanks`, `preview_limit`)
   - `Preview` (list of `ExtractionValue`)
   - `ExtractionValue`
-  - `OutputDestination` (`console` or `file(path)`)
+  - Shared `OutputDestination` (`console` or `file(path)`)
 - Application service:
   - `Application::UseCases::RunExtraction` orchestrates one extraction request.
 - Infrastructure adapters:
@@ -196,7 +196,7 @@ flowchart LR
 
   AGG --> E1["Entity\nCsvSource"]
   AGG --> E2["Entity\nColumnSelection"]
-  AGG --> V1["Value Objects\nSeparator / ExtractionOptions / Preview / OutputDestination / ExtractionValue"]
+  AGG --> V1["Value Objects\nSeparator / ExtractionOptions / Preview / Shared OutputDestination / ExtractionValue"]
 
   APP --> INFCSV["Infrastructure CSV\nHeaderReader + ValueStreamer"]
   APP --> INFOUT["Infrastructure Output\nConsoleWriter + CsvFileWriter"]
@@ -213,7 +213,7 @@ Core DDD structure:
   - `RowSource` (file path + separator)
 - Value objects:
   - `RowRange` (`start_row`, `end_row`) plus row-range validation errors
-  - `RowOutputDestination` (`console` or `file(path)`)
+  - Shared `OutputDestination` (`console` or `file(path)`)
 - Application service:
   - `Application::UseCases::RunRowExtraction` orchestrates row-range extraction.
 - Infrastructure adapters:
@@ -232,7 +232,7 @@ flowchart LR
   APP2 --> AGG2["Domain Aggregate\nRowSession"]
 
   AGG2 --> E3["Entity\nRowSource"]
-  AGG2 --> V2["Value Objects\nRowRange / RowOutputDestination"]
+  AGG2 --> V2["Value Objects\nRowRange / Shared OutputDestination"]
 
   APP2 --> INFCSV2["Infrastructure CSV\nHeaderReader + RowStreamer"]
   APP2 --> INFOUT2["Infrastructure Output\nCsvRowConsoleWriter + CsvRowFileWriter"]
@@ -248,7 +248,7 @@ Core DDD structure:
   - `RandomizationSource` (file path + separator + header mode)
 - Value objects:
   - `RandomizationOptions` (optional deterministic `seed`)
-  - `RandomizationOutputDestination` (`console` or `file(path)`)
+  - Shared `OutputDestination` (`console` or `file(path)`)
 - Application service:
   - `Application::UseCases::RunRowRandomization` orchestrates row randomization.
 - Infrastructure adapters:
@@ -265,9 +265,43 @@ flowchart LR
   APP3 --> AGG3["Domain Aggregate\nRandomizationSession"]
 
   AGG3 --> E4["Entity\nRandomizationSource"]
-  AGG3 --> V3["Value Objects\nRandomizationOptions / RandomizationOutputDestination"]
+  AGG3 --> V3["Value Objects\nRandomizationOptions / Shared OutputDestination"]
 
   APP3 --> INFCSV3["Infrastructure CSV\nHeaderReader + RowRandomizer"]
+```
+
+### Cross-CSV Dedupe
+
+Core DDD structure:
+
+- Aggregate root: `CrossCsvDedupeSession`
+  - Captures one dedupe request with source/reference profiles, key mapping, match options, and output destination.
+- Entities:
+  - `CsvProfile` (path + separator + header mode) for source and reference CSVs.
+  - `KeyMapping` (source selector + reference selector).
+- Value objects:
+  - `ColumnSelector` (header name or 1-based index mode)
+  - `MatchOptions` (`trim_whitespace`, `case_insensitive`, plus normalization behavior)
+  - Shared `OutputDestination` (`console` or `file(path)`)
+- Application service:
+  - `Application::UseCases::RunCrossCsvDedupe` orchestrates dedupe workflow.
+- Infrastructure adapters:
+  - `Infrastructure::CSV::HeaderReader`
+  - `Infrastructure::CSV::CrossCsvDeduper` (streams source rows while checking membership against reference key set)
+- Interface adapters:
+  - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Prompts::*`
+  - `Interface::CLI::Errors::Presenter`
+
+```mermaid
+flowchart LR
+  UI4["Interface CLI\n(Menu + Prompts + Errors)"] --> APP4["Application Use Case\nRunCrossCsvDedupe"]
+  APP4 --> AGG4["Domain Aggregate\nCrossCsvDedupeSession"]
+
+  AGG4 --> E5["Entities\nCsvProfile(source/reference) + KeyMapping"]
+  AGG4 --> V4["Value Objects\nColumnSelector / MatchOptions / Shared OutputDestination"]
+
+  APP4 --> INFCSV4["Infrastructure CSV\nHeaderReader + CrossCsvDeduper"]
 ```
 
 ## Project layout
@@ -284,6 +318,7 @@ lib/csvtool/application/use_cases/run_row_randomization.rb
 lib/csvtool/application/use_cases/run_cross_csv_dedupe.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
+lib/csvtool/domain/shared/output_destination.rb
 lib/csvtool/interface/cli/menu_loop.rb
 lib/csvtool/interface/cli/prompts/*
 lib/csvtool/interface/cli/errors/presenter.rb
