@@ -3,6 +3,7 @@
 require "csv"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_randomizer"
+require "csvtool/infrastructure/output/csv_randomized_row_file_writer"
 
 module Csvtool
   module Application
@@ -16,10 +17,14 @@ module Csvtool
 
         def initialize(
           header_reader: Infrastructure::CSV::HeaderReader.new,
-          row_randomizer: Infrastructure::CSV::RowRandomizer.new
+          row_randomizer: Infrastructure::CSV::RowRandomizer.new,
+          csv_randomized_row_file_writer: nil
         )
           @header_reader = header_reader
           @row_randomizer = row_randomizer
+          @csv_randomized_row_file_writer = csv_randomized_row_file_writer || Infrastructure::Output::CsvRandomizedRowFileWriter.new(
+            row_randomizer: @row_randomizer
+          )
         end
 
         def read_headers(file_path:, col_sep:, headers_present:)
@@ -40,7 +45,7 @@ module Csvtool
 
         def randomize(session:, headers:, on_row: nil)
           if session.output_destination.file?
-            write_file(
+            @csv_randomized_row_file_writer.call(
               path: session.output_destination.path,
               headers: headers,
               file_path: session.source.path,
@@ -48,6 +53,7 @@ module Csvtool
               headers_present: session.source.headers_present?,
               seed: session.options.seed
             )
+            success(output_path: session.output_destination.path)
           else
             @row_randomizer.each(
               file_path: session.source.path,
@@ -59,22 +65,15 @@ module Csvtool
           end
         rescue CSV::MalformedCSVError
           failure(:could_not_parse_csv)
-        rescue Errno::EACCES
-          failure(:cannot_read_file, path: session.source.path)
+        rescue Errno::EACCES, Errno::ENOENT => e
+          if session.output_destination.file?
+            failure(:cannot_write_output_file, path: session.output_destination.path, error_class: e.class)
+          else
+            failure(:cannot_read_file, path: session.source.path)
+          end
         end
 
         private
-
-        def write_file(path:, headers:, file_path:, col_sep:, headers_present:, seed:)
-          ::CSV.open(path, "w", write_headers: !headers.nil?, headers: headers, col_sep: col_sep) do |csv|
-            @row_randomizer.each(file_path: file_path, col_sep: col_sep, headers: headers_present, seed: seed) do |fields|
-              csv << fields
-            end
-          end
-          success(output_path: path)
-        rescue Errno::EACCES, Errno::ENOENT => e
-          failure(:cannot_write_output_file, path: path, error_class: e.class)
-        end
 
         def success(data)
           Result.new(ok: true, error: nil, data: data)

@@ -9,6 +9,12 @@ require "csvtool/domain/shared/output_destination"
 require "tmpdir"
 
 class RunRowRandomizationTest < Minitest::Test
+  class RaisingWriter
+    def call(**_kwargs)
+      raise Errno::ENOENT
+    end
+  end
+
   def fixture_path(name)
     File.expand_path("../../../fixtures/#{name}", __dir__)
   end
@@ -105,5 +111,24 @@ class RunRowRandomizationTest < Minitest::Test
     assert result_1.ok?
     assert result_2.ok?
     assert_equal rows_1, rows_2
+  end
+
+  def test_randomize_returns_cannot_write_output_file_when_writer_fails
+    use_case = Csvtool::Application::UseCases::RunRowRandomization.new(
+      csv_randomized_row_file_writer: RaisingWriter.new
+    )
+    session = build_session(
+      file_path: fixture_path("sample_people.csv"),
+      seed: 123,
+      output: :file,
+      output_path: "/tmp/randomized.csv"
+    )
+
+    result = use_case.randomize(session: session, headers: ["name", "city"])
+
+    refute result.ok?
+    assert_equal :cannot_write_output_file, result.error
+    assert_equal "/tmp/randomized.csv", result.data[:path]
+    assert_equal Errno::ENOENT, result.data[:error_class]
   end
 end
