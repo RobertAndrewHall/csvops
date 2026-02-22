@@ -6,13 +6,18 @@ module Csvtool
   module Infrastructure
     module CSV
       class CsvStatsScanner
+        def initialize(csv: ::CSV)
+          @csv = csv
+        end
+
         def call(file_path:, col_sep:, headers_present:)
           data_row_count = 0
           headers = nil
           column_count = 0
           column_stats = []
 
-          ::CSV.foreach(file_path, headers: headers_present, col_sep: col_sep) do |row|
+          # Streaming scan: memory grows with per-column metrics, not row count.
+          @csv.foreach(file_path, headers: headers_present, col_sep: col_sep) do |row|
             if headers_present
               headers ||= row.headers
               column_count = headers.length
