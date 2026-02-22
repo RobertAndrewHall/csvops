@@ -2,7 +2,7 @@
 
 require "csv"
 require "csvtool/interface/cli/menu_loop"
-require "csvtool/application/use_cases/run_extraction"
+require "csvtool/interface/cli/workflows/run_extraction_workflow"
 require "csvtool/application/use_cases/run_row_extraction"
 require "csvtool/application/use_cases/run_row_randomization"
 require "csvtool/interface/cli/workflows/run_cross_csv_dedupe_workflow"
@@ -47,7 +47,7 @@ module Csvtool
     private
 
     def run_menu_loop
-      extract_column_action = -> { Application::UseCases::RunExtraction.new(stdin: @stdin, stdout: @stdout).call }
+      extract_column_action = -> { Interface::CLI::Workflows::RunExtractionWorkflow.new(stdin: @stdin, stdout: @stdout).call }
       extract_rows_action = -> { Application::UseCases::RunRowExtraction.new(stdin: @stdin, stdout: @stdout).call }
       randomize_rows_action = -> { Application::UseCases::RunRowRandomization.new(stdin: @stdin, stdout: @stdout).call }
       dedupe_action = -> { Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow.new(stdin: @stdin, stdout: @stdout).call }

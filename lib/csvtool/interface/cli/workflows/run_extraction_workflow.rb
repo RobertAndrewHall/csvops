@@ -1,0 +1,116 @@
+# frozen_string_literal: true
+
+require "csvtool/application/use_cases/run_extraction"
+require "csvtool/interface/cli/errors/presenter"
+require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/column_selector_prompt"
+require "csvtool/interface/cli/prompts/skip_blanks_prompt"
+require "csvtool/interface/cli/prompts/confirm_prompt"
+require "csvtool/interface/cli/prompts/output_destination_prompt"
+require "csvtool/domain/column_session/separator"
+require "csvtool/domain/column_session/csv_source"
+require "csvtool/domain/column_session/column_selection"
+require "csvtool/domain/column_session/extraction_options"
+require "csvtool/domain/column_session/extraction_value"
+require "csvtool/domain/column_session/preview"
+require "csvtool/domain/column_session/column_session"
+require "csvtool/domain/shared/output_destination"
+
+module Csvtool
+  module Interface
+    module CLI
+      module Workflows
+        class RunExtractionWorkflow
+          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunExtraction.new)
+            @stdin = stdin
+            @stdout = stdout
+            @use_case = use_case
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+          end
+
+          def call
+            file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
+            col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+            return if col_sep.nil?
+
+            header_result = @use_case.read_headers(file_path: file_path, col_sep: col_sep)
+            return handle_error(header_result) unless header_result.ok?
+            headers = header_result.data[:headers]
+
+            column_name = Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(headers)
+            return if column_name.nil?
+            skip_blanks = Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout).call
+
+            session = build_session(file_path: file_path, col_sep: col_sep, column_name: column_name, skip_blanks: skip_blanks)
+            preview_result = @use_case.preview(session: session)
+            return handle_error(preview_result) unless preview_result.ok?
+            preview = Domain::ColumnSession::Preview.new(
+              values: preview_result.data[:preview_values].map { |value| Domain::ColumnSession::ExtractionValue.new(value) }
+            )
+            session = session.with_preview(preview)
+
+            confirmed = Interface::CLI::Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(session.preview.to_strings)
+            return unless confirmed
+            session = session.confirm!
+
+            output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
+              stdin: @stdin,
+              stdout: @stdout,
+              errors: @errors
+            ).call
+            return if output_destination.nil?
+            session = session.with_output_destination(
+              if output_destination[:mode] == :file
+                Domain::Shared::OutputDestination.file(path: output_destination[:path])
+              else
+                Domain::Shared::OutputDestination.console
+              end
+            )
+
+            extract_result = @use_case.extract(session: session, on_value: ->(value) { @stdout.puts value })
+            return handle_error(extract_result) unless extract_result.ok?
+
+            @stdout.puts "Wrote output to #{extract_result.data[:output_path]}" if session.output_destination.file?
+          rescue ArgumentError => e
+            return @errors.empty_output_path if e.message == "file output path cannot be empty"
+
+            raise e
+          end
+
+          private
+
+          def build_session(file_path:, col_sep:, column_name:, skip_blanks:)
+            separator = Domain::ColumnSession::Separator.new(col_sep)
+            source = Domain::ColumnSession::CsvSource.new(path: file_path, separator: separator)
+            column_selection = Domain::ColumnSession::ColumnSelection.new(name: column_name)
+            options = Domain::ColumnSession::ExtractionOptions.new(skip_blanks: skip_blanks, preview_limit: 10)
+
+            Domain::ColumnSession::ColumnSession.start(
+              source: source,
+              column_selection: column_selection,
+              options: options
+            )
+          end
+
+          def handle_error(result)
+            case result.error
+            when :file_not_found
+              @errors.file_not_found(result.data[:path])
+            when :no_headers
+              @errors.no_headers
+            when :column_not_found
+              @errors.column_not_found
+            when :could_not_parse_csv
+              @errors.could_not_parse_csv
+            when :cannot_read_file
+              @errors.cannot_read_file(result.data[:path])
+            when :cannot_write_output_file
+              @errors.cannot_write_output_file(result.data[:path], result.data[:error_class])
+            end
+          end
+        end
+      end
+    end
+  end
+end

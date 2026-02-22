@@ -1,64 +1,44 @@
 # frozen_string_literal: true
 
 require "csv"
-require "csvtool/interface/cli/errors/presenter"
-require "csvtool/interface/cli/prompts/file_path_prompt"
-require "csvtool/interface/cli/prompts/separator_prompt"
-require "csvtool/interface/cli/prompts/column_selector_prompt"
-require "csvtool/interface/cli/prompts/skip_blanks_prompt"
-require "csvtool/interface/cli/prompts/confirm_prompt"
-require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
 require "csvtool/services/preview_builder"
-require "csvtool/infrastructure/output/console_writer"
-require "csvtool/infrastructure/output/csv_file_writer"
-require "csvtool/domain/column_session/separator"
-require "csvtool/domain/column_session/csv_source"
-require "csvtool/domain/column_session/column_selection"
-require "csvtool/domain/column_session/extraction_options"
-require "csvtool/domain/column_session/extraction_value"
-require "csvtool/domain/column_session/preview"
-require "csvtool/domain/column_session/column_session"
-require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
     module UseCases
       class RunExtraction
-        def initialize(stdin:, stdout:)
-          @stdin = stdin
-          @stdout = stdout
-          @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
-          @header_reader = Infrastructure::CSV::HeaderReader.new
-          @value_streamer = Infrastructure::CSV::ValueStreamer.new
-          @preview_builder = Services::PreviewBuilder.new(value_streamer: @value_streamer)
+        Result = Struct.new(:ok, :error, :data, keyword_init: true) do
+          def ok?
+            ok
+          end
         end
 
-        def call
-          file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-          return @errors.file_not_found(file_path) unless File.file?(file_path)
+        def initialize(
+          header_reader: Infrastructure::CSV::HeaderReader.new,
+          value_streamer: Infrastructure::CSV::ValueStreamer.new,
+          preview_builder: nil
+        )
+          @header_reader = header_reader
+          @value_streamer = value_streamer
+          @preview_builder = preview_builder || Services::PreviewBuilder.new(value_streamer: value_streamer)
+        end
 
-          col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-          return if col_sep.nil?
-          separator = Domain::ColumnSession::Separator.new(col_sep)
+        def read_headers(file_path:, col_sep:)
+          return failure(:file_not_found, path: file_path) unless File.file?(file_path)
 
-          source = Domain::ColumnSession::CsvSource.new(path: file_path, separator: separator)
-          headers = @header_reader.call(file_path: source.path, col_sep: source.separator.value)
-          return @errors.no_headers if headers.empty?
+          headers = @header_reader.call(file_path: file_path, col_sep: col_sep)
+          return failure(:no_headers) if headers.empty?
 
-          column_name = Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(headers)
-          return if column_name.nil?
-          column_selection = Domain::ColumnSession::ColumnSelection.new(name: column_name)
+          success(headers: headers)
+        rescue CSV::MalformedCSVError
+          failure(:could_not_parse_csv)
+        rescue Errno::EACCES
+          failure(:cannot_read_file, path: file_path)
+        end
 
-          skip_blanks = Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout).call
-          options = Domain::ColumnSession::ExtractionOptions.new(skip_blanks: skip_blanks, preview_limit: 10)
-          session = Domain::ColumnSession::ColumnSession.start(
-            source: source,
-            column_selection: column_selection,
-            options: options
-          )
-
+        def preview(session:)
           preview_values = @preview_builder.call(
             file_path: session.source.path,
             column_name: session.column_selection.name,
@@ -66,58 +46,60 @@ module Csvtool
             skip_blanks: session.options.skip_blanks?,
             limit: session.options.preview_limit
           )
-          preview = Domain::ColumnSession::Preview.new(
-            values: preview_values.map { |value| Domain::ColumnSession::ExtractionValue.new(value) }
-          )
-          session = session.with_preview(preview)
-
-          confirmed = Interface::CLI::Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(session.preview.to_strings)
-          return unless confirmed
-          session = session.confirm!
-
-          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-          return if output_destination.nil?
-          domain_destination =
-            if output_destination[:mode] == :file
-              Domain::Shared::OutputDestination.file(path: output_destination[:path])
-            else
-              Domain::Shared::OutputDestination.console
-            end
-          session = session.with_output_destination(domain_destination)
-
-          write_output(
-            session.output_destination,
-            file_path: session.source.path,
-            column_name: session.column_selection.name,
-            col_sep: session.source.separator.value,
-            skip_blanks: session.options.skip_blanks?
-          )
+          success(preview_values: preview_values)
         rescue CSV::MalformedCSVError
-          @errors.could_not_parse_csv
+          failure(:could_not_parse_csv)
         rescue Errno::EACCES
-          @errors.cannot_read_file(file_path)
+          failure(:cannot_read_file, path: session.source.path)
+        end
+
+        def extract(session:, on_value: nil)
+          if session.output_destination.file?
+            write_file(
+              output_path: session.output_destination.path,
+              file_path: session.source.path,
+              column_name: session.column_selection.name,
+              col_sep: session.source.separator.value,
+              skip_blanks: session.options.skip_blanks?
+            )
+          else
+            @value_streamer.each(
+              file_path: session.source.path,
+              column_name: session.column_selection.name,
+              col_sep: session.source.separator.value,
+              skip_blanks: session.options.skip_blanks?
+            ) { |value| on_value.call(value) if on_value }
+            success({})
+          end
+        rescue CSV::MalformedCSVError
+          failure(:could_not_parse_csv)
+        rescue Errno::EACCES
+          failure(:cannot_read_file, path: session.source.path)
         end
 
         private
 
-        def writer_for(output_destination)
-          if output_destination.file?
-            Infrastructure::Output::CsvFileWriter.new(stdout: @stdout, errors: @errors, value_streamer: @value_streamer)
-          else
-            Infrastructure::Output::ConsoleWriter.new(stdout: @stdout, value_streamer: @value_streamer)
+        def write_file(output_path:, file_path:, column_name:, col_sep:, skip_blanks:)
+          ::CSV.open(output_path, "w") do |csv|
+            csv << [column_name]
+            @value_streamer.each(
+              file_path: file_path,
+              column_name: column_name,
+              col_sep: col_sep,
+              skip_blanks: skip_blanks
+            ) { |value| csv << [value] }
           end
+          success(output_path: output_path)
+        rescue Errno::EACCES, Errno::ENOENT => e
+          failure(:cannot_write_output_file, path: output_path, error_class: e.class)
         end
 
-        def write_output(output_destination, file_path:, column_name:, col_sep:, skip_blanks:)
-          writer = writer_for(output_destination)
-          args = {
-            file_path: file_path,
-            column_name: column_name,
-            col_sep: col_sep,
-            skip_blanks: skip_blanks
-          }
-          args[:output_path] = output_destination.path if output_destination.file?
-          writer.call(**args)
+        def success(data)
+          Result.new(ok: true, error: nil, data: data)
+        end
+
+        def failure(code, data = {})
+          Result.new(ok: false, error: code, data: data)
         end
       end
     end
