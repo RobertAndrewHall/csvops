@@ -22,6 +22,10 @@ module Csvtool
                 @stdout.puts "  #{stats[:name]}: non_blank=#{stats[:non_blank_count]} blank=#{stats[:blank_count]}"
               end
             end
+
+            def print_file_written(path)
+              @stdout.puts "Wrote output to #{path}"
+            end
           end
         end
       end

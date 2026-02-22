@@ -2,6 +2,7 @@
 
 require_relative "../../../../test_helper"
 require "csvtool/interface/cli/workflows/run_csv_stats_workflow"
+require "tmpdir"
 
 class RunCsvStatsWorkflowTest < Minitest::Test
   def fixture_path(name)
@@ -106,6 +107,40 @@ class RunCsvStatsWorkflowTest < Minitest::Test
     ).call
 
     assert_includes out.string, "Could not parse CSV file."
+    refute_includes out.string, "Traceback"
+  end
+
+  def test_workflow_can_write_stats_to_file
+    out = StringIO.new
+
+    Dir.mktmpdir do |dir|
+      output_path = File.join(dir, "stats.csv")
+      input = [fixture_path("sample_people.csv"), "", "", "2", output_path].join("\n") + "\n"
+
+      Csvtool::Interface::CLI::Workflows::RunCsvStatsWorkflow.new(
+        stdin: StringIO.new(input),
+        stdout: out
+      ).call
+
+      assert_includes out.string, "Wrote output to #{output_path}"
+      csv_text = File.read(output_path)
+      assert_includes csv_text, "metric,value"
+      assert_includes csv_text, "row_count,3"
+      assert_includes csv_text, "column_count,2"
+    end
+  end
+
+  def test_workflow_reports_cannot_write_output_file
+    out = StringIO.new
+    output_path = "/tmp/does-not-exist-dir/stats.csv"
+    input = [fixture_path("sample_people.csv"), "", "", "2", output_path].join("\n") + "\n"
+
+    Csvtool::Interface::CLI::Workflows::RunCsvStatsWorkflow.new(
+      stdin: StringIO.new(input),
+      stdout: out
+    ).call
+
+    assert_includes out.string, "Cannot write output file: #{output_path} (Errno::ENOENT)"
     refute_includes out.string, "Traceback"
   end
 end

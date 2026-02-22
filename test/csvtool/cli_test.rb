@@ -24,6 +24,7 @@ class TestCli < Minitest::Test
       fixture_path("sample_people.csv"),
       "",
       "",
+      "",
       "8"
     ].join("\n") + "\n"
 
@@ -43,6 +44,7 @@ class TestCli < Minitest::Test
       "/tmp/does-not-exist.csv",
       "",
       "",
+      "",
       "8"
     ].join("\n") + "\n"
 
@@ -51,6 +53,31 @@ class TestCli < Minitest::Test
     assert_equal 0, status
     assert_includes output.string, "File not found: /tmp/does-not-exist.csv"
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+  end
+
+  def test_stats_workflow_can_write_output_to_file
+    output = StringIO.new
+
+    Dir.mktmpdir do |dir|
+      output_path = File.join(dir, "stats.csv")
+      input = [
+        "7",
+        fixture_path("sample_people.csv"),
+        "",
+        "",
+        "2",
+        output_path,
+        "8"
+      ].join("\n") + "\n"
+
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+      assert_equal 0, status
+      assert_includes output.string, "Wrote output to #{output_path}"
+      csv_text = File.read(output_path)
+      assert_includes csv_text, "metric,value"
+      assert_includes csv_text, "row_count,3"
+    end
   end
 
   def test_split_workflow_splits_csv_in_menu_flow

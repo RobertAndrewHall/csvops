@@ -15,6 +15,7 @@ module Csvtool
                 end
 
                 context.fetch(:presenter).print_summary(result.data)
+                context.fetch(:presenter).print_file_written(result.data[:output_path]) if result.data[:output_path]
                 nil
               end
             end
