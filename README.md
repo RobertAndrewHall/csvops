@@ -38,11 +38,12 @@ CSV Tool Menu
 3. Randomize rows
 4. Dedupe using another CSV
 5. Validate parity
-6. Exit
+6. Split CSV into chunks
+7. Exit
 >
 ```
 
-Select `1` for column extraction, `2` for row-range extraction, `3` for row randomization, `4` for cross-CSV dedupe, or `5` for parity validation.
+Select `1` for column extraction, `2` for row-range extraction, `3` for row randomization, `4` for cross-CSV dedupe, `5` for parity validation, or `6` for CSV splitting.
 
 ### 3. Follow prompts
 
@@ -61,6 +62,7 @@ Prompt flow by action:
 - `Randomize rows`: file path, separator, headers present, optional seed, output destination.
 - `Dedupe using another CSV`: source/reference files, separators, header modes, key selectors, match options, output destination.
 - `Validate parity`: left/right files, separator, header mode, parity summary, mismatch samples.
+- `Split CSV into chunks`: source file, separator, header mode, chunk size, output directory/prefix, overwrite policy, optional manifest.
 
 ### 4. Example interaction (console output)
 
@@ -129,10 +131,11 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
  CSV Tool Menu
  1. Extract column
  2. Extract rows (range)
- 3. Randomize rows
- 4. Dedupe using another CSV
- 5. Validate parity
- 6. Exit
+3. Randomize rows
+4. Dedupe using another CSV
+5. Validate parity
+ 6. Split CSV into chunks
+ 7. Exit
 +> 4
  CSV file path: /tmp/source.csv
  Source CSV separator:
@@ -177,10 +180,11 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
  CSV Tool Menu
  1. Extract column
  2. Extract rows (range)
- 3. Randomize rows
- 4. Dedupe using another CSV
- 5. Validate parity
- 6. Exit
+3. Randomize rows
+4. Dedupe using another CSV
+5. Validate parity
+ 6. Split CSV into chunks
+ 7. Exit
 +> 5
  Left CSV file path: /tmp/left.csv
  Right CSV file path: /tmp/right.csv
@@ -208,6 +212,41 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
 - Exact duplicate semantics are preserved by count deltas per normalized row value.
 - Memory scales with the number of distinct row keys in the parity map, not the total input row count.
 
+### 10. Split interaction example
+
+Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
+
+```diff
+ CSV Tool Menu
+ 1. Extract column
+ 2. Extract rows (range)
+ 3. Randomize rows
+ 4. Dedupe using another CSV
+ 5. Validate parity
+ 6. Split CSV into chunks
+ 7. Exit
++> 6
+ Source CSV file path: /tmp/people.csv
+ Choose separator:
+ 1. comma (,)
+ 2. tab (\t)
+ 3. semicolon (;)
+ 4. pipe (|)
+ 5. custom
++Separator choice [1]: 1
+ Headers present? [Y/n]:
++Rows per chunk: 1000
+ Output directory [/tmp]:
+ Output file prefix [people]:
+ Overwrite existing chunk files? [y/N]:
+ Write manifest file? [y/N]:
+-Split complete.
+-Chunk size: 1000
+-Data rows: 25000
+-Chunks written: 25
+-/tmp/people_part_001.csv
+```
+
 ## Testing
 
 Run tests:
@@ -224,7 +263,7 @@ bundle exec rake test
 
 ## Alpha release
 
-Current prerelease version: `0.5.0.alpha`
+Current prerelease version: `0.6.0.alpha`
 
 Install prerelease from RubyGems:
 
@@ -234,7 +273,7 @@ gem install csvops --pre
 
 Release runbook:
 
-- `docs/release-v0.5.0-alpha.md`
+- `docs/release-v0.6.0-alpha.md`
 
 
 ## Architecture

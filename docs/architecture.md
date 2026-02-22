@@ -2,15 +2,15 @@
 
 The codebase follows a DDD-lite layered structure:
 
-- `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, `RandomizationSession`, and `CrossCsvDedupeSession` aggregates + supporting entities/value objects).
-- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`, `RunCsvParity`).
+- `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, `RandomizationSession`, `CrossCsvDedupeSession`, and `CsvSplitSession` aggregates + supporting entities/value objects).
+- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`, `RunCsvParity`, `RunCsvSplit`).
 - `infrastructure/`: CSV reading/streaming/comparison and output adapters (console/file).
 - `interface/cli/`: menu, prompts, workflows, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
 ## Workflow boundary (standardized)
 
-For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`), the boundary is:
+For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`, `CSV Split`), the boundary is:
 
 - `interface/cli/workflows/*`: owns prompts, stdout rendering, and user-facing error presentation.
 - `interface/cli/workflows/builders/*`: builds domain sessions/aggregates from prompt results.
@@ -33,6 +33,7 @@ Current usage:
 - `RunRowRandomizationWorkflow` uses `WorkflowStepPipeline` + `Steps::RowRandomization::*`.
 - `RunCrossCsvDedupeWorkflow` uses `WorkflowStepPipeline` + `Steps::CrossCsvDedupe::*`.
 - `RunCsvParityWorkflow` uses `WorkflowStepPipeline` + `Steps::Parity::*`.
+- `RunCsvSplitWorkflow` uses `WorkflowStepPipeline` + `Steps::CsvSplit::*`.
 
 ## Adding New Concepts
 
@@ -108,7 +109,7 @@ For a new function type, prefer one of these patterns:
 
 ## Domain model
 
-Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, and `CSV Parity`.
+Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`, and `CSV Split`.
 
 ### Cross-CSV Dedupe (Large-file behavior)
 
@@ -421,6 +422,60 @@ classDiagram
   RunCsvParity --> CsvParityComparator
 ```
 
+### CSV Split
+
+Core DDD structure:
+
+- Aggregate root: `SplitSession`
+  - Captures one CSV split request.
+  - Holds split source and split options.
+- Entities:
+  - `SplitSource` (path + separator + header mode)
+- Value objects:
+  - `SplitOptions` (chunk size, output directory, file prefix, overwrite policy, optional manifest configuration)
+- Application service:
+  - `Application::UseCases::RunCsvSplit` orchestrates split execution and returns request/result style payloads.
+- Infrastructure adapters:
+  - `Infrastructure::CSV::CsvSplitter` (streaming row-by-row chunk writer)
+  - `Infrastructure::Output::CsvSplitManifestWriter` (optional manifest output)
+- Interface adapters:
+  - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Workflows::RunCsvSplitWorkflow`
+  - `Interface::CLI::Workflows::Builders::CsvSplitSessionBuilder`
+  - `Interface::CLI::Workflows::Steps::WorkflowStepPipeline`
+  - `Interface::CLI::Workflows::Steps::CsvSplit::*`
+  - `Interface::CLI::Workflows::Presenters::CsvSplitPresenter`
+  - `Interface::CLI::Workflows::Support::ResultErrorHandler`
+  - `Interface::CLI::Prompts::*`
+  - `Interface::CLI::Errors::Presenter`
+
+```mermaid
+classDiagram
+  direction LR
+  class MenuLoop
+  class RunCsvSplitWorkflow
+  class Prompts
+  class Errors
+  class RunCsvSplit
+  class SplitSession
+  class SplitSource
+  class SplitOptions
+  class CsvSplitter
+  class CsvSplitManifestWriter
+  class CsvSplitPresenter
+
+  MenuLoop --> RunCsvSplitWorkflow : invokes
+  RunCsvSplitWorkflow --> Prompts : uses
+  RunCsvSplitWorkflow --> Errors : reports failures
+  RunCsvSplitWorkflow --> CsvSplitPresenter : renders
+  RunCsvSplitWorkflow --> RunCsvSplit : calls
+  RunCsvSplit --> SplitSession : orchestrates
+  SplitSession o-- SplitSource
+  SplitSession o-- SplitOptions
+  RunCsvSplit --> CsvSplitter
+  RunCsvSplit --> CsvSplitManifestWriter
+```
+
 ## Project layout
 
 ```text
@@ -431,12 +486,14 @@ lib/csvtool/domain/row_session/*
 lib/csvtool/domain/row_randomization_session/*
 lib/csvtool/domain/cross_csv_dedupe_session/*
 lib/csvtool/domain/csv_parity_session/*
+lib/csvtool/domain/csv_split_session/*
 lib/csvtool/domain/shared/output_destination.rb
 lib/csvtool/application/use_cases/run_extraction.rb
 lib/csvtool/application/use_cases/run_row_extraction.rb
 lib/csvtool/application/use_cases/run_row_randomization.rb
 lib/csvtool/application/use_cases/run_cross_csv_dedupe.rb
 lib/csvtool/application/use_cases/run_csv_parity.rb
+lib/csvtool/application/use_cases/run_csv_split.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/interface/cli/menu_loop.rb
