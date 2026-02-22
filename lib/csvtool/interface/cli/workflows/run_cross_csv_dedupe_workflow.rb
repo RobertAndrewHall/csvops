@@ -9,13 +9,13 @@ require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/yes_no_prompt"
 require "csvtool/interface/cli/prompts/dedupe_key_selector_prompt"
+require "csvtool/interface/cli/workflows/support/output_destination_mapper"
+require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
 require "csvtool/domain/cross_csv_dedupe_session/column_selector"
 require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
 require "csvtool/domain/cross_csv_dedupe_session/match_options"
 require "csvtool/domain/cross_csv_dedupe_session/cross_csv_dedupe_session"
-require "csvtool/domain/shared/output_destination"
-
 module Csvtool
   module Interface
     module CLI
@@ -26,6 +26,8 @@ module Csvtool
             @stdout = stdout
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @output_destination_mapper = Support::OutputDestinationMapper.new
+            @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
           end
 
           def call
@@ -89,13 +91,7 @@ module Csvtool
               errors: @errors
             ).call
             return if output_destination.nil?
-            session = session.with_output_destination(
-              if output_destination[:mode] == :file
-                Domain::Shared::OutputDestination.file(path: output_destination[:path])
-              else
-                Domain::Shared::OutputDestination.console
-              end
-            )
+            session = session.with_output_destination(@output_destination_mapper.call(output_destination))
 
             result = @use_case.call(
               session: session,
@@ -127,16 +123,12 @@ module Csvtool
           end
 
           def handle_error(result)
-            case result.error
-            when :column_not_found
-              @errors.column_not_found
-            when :could_not_parse_csv
-              @errors.could_not_parse_csv
-            when :cannot_read_file
-              @errors.cannot_read_file(result.data[:path])
-            when :cannot_write_output_file
-              @errors.cannot_write_output_file(result.data[:path], result.data[:error_class])
-            end
+            @result_error_handler.call(result, {
+              column_not_found: ->(_r, errors) { errors.column_not_found },
+              could_not_parse_csv: ->(_r, errors) { errors.could_not_parse_csv },
+              cannot_read_file: ->(r, errors) { errors.cannot_read_file(r.data[:path]) },
+              cannot_write_output_file: ->(r, errors) { errors.cannot_write_output_file(r.data[:path], r.data[:error_class]) }
+            })
           end
 
         end

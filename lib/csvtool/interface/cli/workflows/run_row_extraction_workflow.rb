@@ -6,11 +6,11 @@ require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
+require "csvtool/interface/cli/workflows/support/output_destination_mapper"
+require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/row_session/row_range"
 require "csvtool/domain/row_session/row_source"
 require "csvtool/domain/row_session/row_session"
-require "csvtool/domain/shared/output_destination"
-
 module Csvtool
   module Interface
     module CLI
@@ -21,6 +21,8 @@ module Csvtool
             @stdout = stdout
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @output_destination_mapper = Support::OutputDestinationMapper.new
+            @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
           end
 
           def call
@@ -52,7 +54,7 @@ module Csvtool
               file_path: file_path,
               col_sep: col_sep,
               row_range: row_range,
-              output_destination: output_destination
+              destination: @output_destination_mapper.call(output_destination)
             )
 
             wrote_header = false
@@ -87,31 +89,20 @@ module Csvtool
 
           private
 
-          def build_session(file_path:, col_sep:, row_range:, output_destination:)
+          def build_session(file_path:, col_sep:, row_range:, destination:)
             source = Domain::RowSession::RowSource.new(path: file_path, separator: col_sep)
             session = Domain::RowSession::RowSession.start(source: source, row_range: row_range)
-            session.with_output_destination(
-              if output_destination[:mode] == :file
-                Domain::Shared::OutputDestination.file(path: output_destination[:path])
-              else
-                Domain::Shared::OutputDestination.console
-              end
-            )
+            session.with_output_destination(destination)
           end
 
           def handle_error(result)
-            case result.error
-            when :file_not_found
-              @errors.file_not_found(result.data[:path])
-            when :no_headers
-              @errors.no_headers
-            when :could_not_parse_csv
-              @errors.could_not_parse_csv
-            when :cannot_read_file
-              @errors.cannot_read_file(result.data[:path])
-            when :cannot_write_output_file
-              @errors.cannot_write_output_file(result.data[:path], result.data[:error_class])
-            end
+            @result_error_handler.call(result, {
+              file_not_found: ->(r, errors) { errors.file_not_found(r.data[:path]) },
+              no_headers: ->(_r, errors) { errors.no_headers },
+              could_not_parse_csv: ->(_r, errors) { errors.could_not_parse_csv },
+              cannot_read_file: ->(r, errors) { errors.cannot_read_file(r.data[:path]) },
+              cannot_write_output_file: ->(r, errors) { errors.cannot_write_output_file(r.data[:path], r.data[:error_class]) }
+            })
           end
         end
       end
