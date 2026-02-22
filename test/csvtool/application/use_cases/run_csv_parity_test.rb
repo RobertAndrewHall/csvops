@@ -42,6 +42,8 @@ class RunCsvParityTest < Minitest::Test
     assert_equal false, result.data[:match]
     assert_equal 1, result.data[:left_only_count]
     assert_equal 0, result.data[:right_only_count]
+    assert_equal "1,Alice", result.data[:left_only_examples][0][:row]
+    assert_equal 1, result.data[:left_only_examples][0][:count_delta]
   end
 
   def test_headered_mode_fails_when_headers_do_not_match

@@ -469,6 +469,28 @@ class TestCli < Minitest::Test
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 
+  def test_parity_workflow_prints_mismatch_examples_and_counts
+    output = StringIO.new
+    input = [
+      "5",
+      fixture_path("sample_people.csv"),
+      fixture_path("parity_people_mismatch.csv"),
+      "",
+      "",
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "MISMATCH"
+    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=1 right_only=1"
+    assert_includes output.string, "Left-only examples:"
+    assert_includes output.string, "Cara,Berlin (count +1)"
+    assert_includes output.string, "Right-only examples:"
+    assert_includes output.string, "Dina,Rome (count +1)"
+  end
+
   def test_end_to_end_file_output_writes_expected_csv
     output = StringIO.new
     output_path = nil

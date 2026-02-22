@@ -36,6 +36,10 @@ class CsvParityComparatorTest < Minitest::Test
     assert_equal false, result[:match]
     assert_equal 1, result[:left_only_count]
     assert_equal 1, result[:right_only_count]
+    assert_equal "Cara,Berlin", result[:left_only_examples][0][:row]
+    assert_equal 1, result[:left_only_examples][0][:count_delta]
+    assert_equal "Dina,Rome", result[:right_only_examples][0][:row]
+    assert_equal 1, result[:right_only_examples][0][:count_delta]
   end
 
   def test_respects_duplicate_counts
@@ -51,5 +55,7 @@ class CsvParityComparatorTest < Minitest::Test
     assert_equal false, result[:match]
     assert_equal 1, result[:left_only_count]
     assert_equal 0, result[:right_only_count]
+    assert_equal "1,Alice", result[:left_only_examples][0][:row]
+    assert_equal 1, result[:left_only_examples][0][:count_delta]
   end
 end
