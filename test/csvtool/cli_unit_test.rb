@@ -16,7 +16,7 @@ class CliUnitTest < Minitest::Test
   end
 
   def test_menu_command_can_exit_zero
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("4\n"), stdout: StringIO.new, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("5\n"), stdout: StringIO.new, stderr: StringIO.new)
     assert_equal 0, status
   end
 
@@ -28,7 +28,7 @@ class CliUnitTest < Minitest::Test
   def test_menu_routes_to_row_range_shell
     stdout = StringIO.new
     fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    input = ["2", fixture, "", "2", "3", "", "4"].join("\n") + "\n"
+    input = ["2", fixture, "", "2", "3", "", "5"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "name,city"
@@ -39,12 +39,22 @@ class CliUnitTest < Minitest::Test
   def test_menu_routes_to_randomize_rows_shell
     stdout = StringIO.new
     fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    input = ["3", fixture, "", "", "", "", "4"].join("\n") + "\n"
+    input = ["3", fixture, "", "", "", "", "5"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "name,city"
     assert_includes stdout.string, "Alice,London"
     assert_includes stdout.string, "Bob,Paris"
     assert_includes stdout.string, "Cara,Berlin"
+  end
+
+  def test_menu_routes_to_dedupe_shell
+    stdout = StringIO.new
+    source_fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
+    reference_fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
+    input = ["4", source_fixture, reference_fixture, "name", "name", "5"].join("\n") + "\n"
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
+    assert_equal 0, status
+    assert_includes stdout.string, "Dedupe workflow selected."
   end
 end

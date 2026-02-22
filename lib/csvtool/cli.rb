@@ -5,6 +5,7 @@ require "csvtool/interface/cli/menu_loop"
 require "csvtool/application/use_cases/run_extraction"
 require "csvtool/application/use_cases/run_row_extraction"
 require "csvtool/application/use_cases/run_row_randomization"
+require "csvtool/application/use_cases/run_cross_csv_dedupe"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
@@ -16,6 +17,7 @@ module Csvtool
       "Extract column",
       "Extract rows (range)",
       "Randomize rows",
+      "Dedupe using another CSV",
       "Exit"
     ].freeze
 
@@ -48,13 +50,15 @@ module Csvtool
       extract_column_action = -> { Application::UseCases::RunExtraction.new(stdin: @stdin, stdout: @stdout).call }
       extract_rows_action = -> { Application::UseCases::RunRowExtraction.new(stdin: @stdin, stdout: @stdout).call }
       randomize_rows_action = -> { Application::UseCases::RunRowRandomization.new(stdin: @stdin, stdout: @stdout).call }
+      dedupe_action = -> { Application::UseCases::RunCrossCsvDedupe.new(stdin: @stdin, stdout: @stdout).call }
       Interface::CLI::MenuLoop.new(
         stdin: @stdin,
         stdout: @stdout,
         menu_options: MENU_OPTIONS,
         extract_column_action: extract_column_action,
         extract_rows_action: extract_rows_action,
-        randomize_rows_action: randomize_rows_action
+        randomize_rows_action: randomize_rows_action,
+        dedupe_action: dedupe_action
       ).run
     end
 

@@ -4,13 +4,14 @@ module Csvtool
   module Interface
     module CLI
       class MenuLoop
-        def initialize(stdin:, stdout:, menu_options:, extract_column_action:, extract_rows_action:, randomize_rows_action:)
+        def initialize(stdin:, stdout:, menu_options:, extract_column_action:, extract_rows_action:, randomize_rows_action:, dedupe_action:)
           @stdin = stdin
           @stdout = stdout
           @menu_options = menu_options
           @extract_column_action = extract_column_action
           @extract_rows_action = extract_rows_action
           @randomize_rows_action = randomize_rows_action
+          @dedupe_action = dedupe_action
         end
 
         def run
@@ -28,9 +29,11 @@ module Csvtool
             when "3"
               @randomize_rows_action.call
             when "4"
+              @dedupe_action.call
+            when "5"
               return 0
             else
-              @stdout.puts "Please choose 1, 2, 3, or 4."
+              @stdout.puts "Please choose 1, 2, 3, 4, or 5."
             end
           end
         end

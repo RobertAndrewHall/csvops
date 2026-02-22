@@ -11,7 +11,7 @@ class TestCli < Minitest::Test
 
   def test_menu_can_exit_cleanly
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("4\n"), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("5\n"), stdout: output, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes output.string, "CSV Tool Menu"
   end
@@ -26,7 +26,7 @@ class TestCli < Minitest::Test
       "",
       "y",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -58,7 +58,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -79,7 +79,7 @@ class TestCli < Minitest::Test
       "0",
       "3",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -98,7 +98,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -119,7 +119,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -144,7 +144,7 @@ class TestCli < Minitest::Test
         "3",
         "2",
         output_path,
-        "4"
+        "5"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -164,7 +164,7 @@ class TestCli < Minitest::Test
       "1",
       "2",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -184,7 +184,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -209,7 +209,7 @@ class TestCli < Minitest::Test
         "",
         "2",
         output_path,
-        "4"
+        "5"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -231,7 +231,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -250,7 +250,7 @@ class TestCli < Minitest::Test
       "n",
       "",
       "",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -270,7 +270,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "abc",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -278,6 +278,26 @@ class TestCli < Minitest::Test
     assert_equal 0, status
     assert_includes output.string, "Seed must be an integer."
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+  end
+
+  def test_dedupe_workflow_shell_prompts_and_returns_to_menu
+    output = StringIO.new
+    input = [
+      "4",
+      fixture_path("sample_people.csv"),
+      fixture_path("sample_people.csv"),
+      "name",
+      "name",
+      "5"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "Reference CSV file path:"
+    assert_includes output.string, "Source key column name:"
+    assert_includes output.string, "Reference key column name:"
+    assert_includes output.string, "Dedupe workflow selected."
   end
 
   def test_end_to_end_file_output_writes_expected_csv
@@ -296,7 +316,7 @@ class TestCli < Minitest::Test
         "y",
         "2",
         output_path,
-        "4"
+        "5"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -316,7 +336,7 @@ class TestCli < Minitest::Test
       "1",
       "",
       "n",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -352,7 +372,7 @@ class TestCli < Minitest::Test
       "y",
       "2",
       "/tmp/not-a-dir/out.csv",
-      "4"
+      "5"
     ].join("\n") + "\n"
 
     output = StringIO.new
