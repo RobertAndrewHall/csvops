@@ -176,7 +176,7 @@ bundle exec rake test
 
 ## Alpha release
 
-Current prerelease version: `0.3.0.alpha`
+Current prerelease version: `0.4.0.alpha`
 
 Install prerelease from RubyGems:
 
@@ -186,7 +186,7 @@ gem install csvops --pre
 
 Release runbook:
 
-- `docs/release-v0.3.0-alpha.md`
+- `docs/release-v0.4.0-alpha.md`
 
 
 ## Architecture

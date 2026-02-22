@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Csvtool
-  VERSION = "0.3.0.alpha"
+  VERSION = "0.4.0.alpha"
 end
