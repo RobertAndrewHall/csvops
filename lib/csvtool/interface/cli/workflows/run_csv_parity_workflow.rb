@@ -6,6 +6,8 @@ require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/workflows/builders/csv_parity_session_builder"
+require "csvtool/interface/cli/workflows/presenters/csv_parity_presenter"
+require "csvtool/interface/cli/workflows/support/result_error_handler"
 
 module Csvtool
   module Interface
@@ -18,6 +20,8 @@ module Csvtool
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
             @session_builder = Builders::CsvParitySessionBuilder.new
+            @presenter = Presenters::CsvParityPresenter.new(stdout: stdout)
+            @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
           end
 
           def call
@@ -39,46 +43,20 @@ module Csvtool
             result = @use_case.call(session: session)
             return handle_error(result) unless result.ok?
 
-            print_summary(result.data)
+            @presenter.print_summary(result.data)
             nil
           end
 
           private
 
-          def print_summary(data)
-            @stdout.puts(data[:match] ? "MATCH" : "MISMATCH")
-            @stdout.puts "Summary: left_rows=#{data[:left_rows]} right_rows=#{data[:right_rows]} " \
-                         "left_only=#{data[:left_only_count]} right_only=#{data[:right_only_count]}"
-            return if data[:match]
-
-            print_examples("Left-only examples", data[:left_only_examples])
-            print_examples("Right-only examples", data[:right_only_examples])
-          end
-
-          def print_examples(label, examples)
-            return if examples.nil? || examples.empty?
-
-            @stdout.puts "#{label}:"
-            examples.each do |example|
-              @stdout.puts "  #{example[:row]} (count +#{example[:count_delta]})"
-            end
-          end
-
           def handle_error(result)
-            case result.error
-            when :file_not_found
-              @errors.file_not_found(result.data[:path])
-            when :could_not_parse_csv
-              @errors.could_not_parse_csv
-            when :cannot_read_file
-              @errors.cannot_read_file(result.data[:path])
-            when :no_headers
-              @errors.no_headers
-            when :header_mismatch
-              @errors.header_mismatch
-            else
-              @stdout.puts "Unexpected parity validation failure."
-            end
+            @result_error_handler.call(result, {
+              file_not_found: ->(r, errors) { errors.file_not_found(r.data[:path]) },
+              could_not_parse_csv: ->(_r, errors) { errors.could_not_parse_csv },
+              cannot_read_file: ->(r, errors) { errors.cannot_read_file(r.data[:path]) },
+              no_headers: ->(_r, errors) { errors.no_headers },
+              header_mismatch: ->(_r, errors) { errors.header_mismatch }
+            })
           end
         end
       end
