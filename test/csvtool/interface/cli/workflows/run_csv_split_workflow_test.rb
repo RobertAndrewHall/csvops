@@ -16,7 +16,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
     Dir.mktmpdir do |dir|
       source_path = File.join(dir, "people.csv")
       FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
-      input = [source_path, "", "", "10", "", "", ""].join("\n") + "\n"
+      input = [source_path, "", "", "10", "", "", "", ""].join("\n") + "\n"
 
       Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
         stdin: StringIO.new(input),
@@ -38,7 +38,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
     Dir.mktmpdir do |dir|
       source_path = File.join(dir, "people.tsv")
       FileUtils.cp(fixture_path("sample_people.tsv"), source_path)
-      input = [source_path, "2", "", "2", "", "", ""].join("\n") + "\n"
+      input = [source_path, "2", "", "2", "", "", "", ""].join("\n") + "\n"
 
       Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
         stdin: StringIO.new(input),
@@ -57,7 +57,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
     Dir.mktmpdir do |dir|
       source_path = File.join(dir, "people.csv")
       FileUtils.cp(fixture_path("sample_people_no_headers.csv"), source_path)
-      input = [source_path, "", "n", "2", "", "", ""].join("\n") + "\n"
+      input = [source_path, "", "n", "2", "", "", "", ""].join("\n") + "\n"
 
       Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
         stdin: StringIO.new(input),
@@ -77,7 +77,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
     Dir.mktmpdir do |dir|
       source_path = File.join(dir, "people.txt")
       FileUtils.cp(fixture_path("sample_people_colon.txt"), source_path)
-      input = [source_path, "5", ":", "", "2", "", "", ""].join("\n") + "\n"
+      input = [source_path, "5", ":", "", "2", "", "", "", ""].join("\n") + "\n"
 
       Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
         stdin: StringIO.new(input),
@@ -98,7 +98,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
       output_dir = File.join(dir, "chunks")
       Dir.mkdir(output_dir)
       FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
-      input = [source_path, "", "", "10", output_dir, "batch", ""].join("\n") + "\n"
+      input = [source_path, "", "", "10", output_dir, "batch", "", ""].join("\n") + "\n"
 
       Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
         stdin: StringIO.new(input),
@@ -119,7 +119,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
       FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
       existing = File.join(dir, "people_part_001.csv")
       File.write(existing, "sentinel\n")
-      input = [source_path, "", "", "10", "", "", ""].join("\n") + "\n"
+      input = [source_path, "", "", "10", "", "", "", ""].join("\n") + "\n"
 
       Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
         stdin: StringIO.new(input),
@@ -133,7 +133,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
 
   def test_workflow_reports_missing_file
     out = StringIO.new
-    input = ["/tmp/does-not-exist.csv", "", "", "10", "", "", ""].join("\n") + "\n"
+    input = ["/tmp/does-not-exist.csv", "", "", "10", "", "", "", ""].join("\n") + "\n"
 
     Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
       stdin: StringIO.new(input),
@@ -162,7 +162,7 @@ class RunCsvSplitWorkflowTest < Minitest::Test
       source_path = File.join(dir, "people.csv")
       output_dir = File.join(dir, "chunks")
       FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
-      input = [source_path, "", "", "10", output_dir, "people", ""].join("\n") + "\n"
+      input = [source_path, "", "", "10", output_dir, "people", "", ""].join("\n") + "\n"
 
       Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
         stdin: StringIO.new(input),
@@ -171,6 +171,30 @@ class RunCsvSplitWorkflowTest < Minitest::Test
 
       assert Dir.exist?(output_dir)
       assert File.file?(File.join(output_dir, "people_part_001.csv"))
+    end
+  end
+
+  def test_workflow_can_write_manifest_when_enabled
+    out = StringIO.new
+
+    Dir.mktmpdir do |dir|
+      source_path = File.join(dir, "people.csv")
+      FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
+      manifest_path = File.join(dir, "manifest.csv")
+      input = [source_path, "", "", "10", "", "", "", "y", manifest_path].join("\n") + "\n"
+
+      Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
+        stdin: StringIO.new(input),
+        stdout: out
+      ).call
+
+      assert File.file?(manifest_path)
+      lines = File.read(manifest_path).lines.map(&:strip)
+      assert_equal "chunk_index,chunk_path,row_count", lines.first
+      assert_includes lines[1], ",10"
+      assert_includes lines[2], ",10"
+      assert_includes lines[3], ",5"
+      assert_includes out.string, "Manifest: #{manifest_path}"
     end
   end
 end

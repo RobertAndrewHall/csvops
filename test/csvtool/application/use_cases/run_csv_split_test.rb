@@ -93,4 +93,32 @@ class RunCsvSplitTest < Minitest::Test
       assert File.file?(File.join(output_dir, "batch_part_001.csv"))
     end
   end
+
+  def test_writes_manifest_when_enabled
+    use_case = Csvtool::Application::UseCases::RunCsvSplit.new
+
+    Dir.mktmpdir do |dir|
+      source_path = File.join(dir, "people.csv")
+      manifest_path = File.join(dir, "manifest.csv")
+      FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
+
+      source = Csvtool::Domain::CsvSplitSession::SplitSource.new(path: source_path, separator: ",", headers_present: true)
+      options = Csvtool::Domain::CsvSplitSession::SplitOptions.new(
+        chunk_size: 10,
+        write_manifest: true,
+        manifest_path: manifest_path
+      )
+      session = Csvtool::Domain::CsvSplitSession::SplitSession.start(source: source, options: options)
+
+      result = use_case.call(session: session)
+
+      assert result.ok?
+      assert_equal manifest_path, result.data[:manifest_path]
+      lines = File.read(manifest_path).lines.map(&:strip)
+      assert_equal "chunk_index,chunk_path,row_count", lines.first
+      assert_includes lines[1], ",10"
+      assert_includes lines[2], ",10"
+      assert_includes lines[3], ",5"
+    end
+  end
 end

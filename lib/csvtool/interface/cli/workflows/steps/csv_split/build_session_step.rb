@@ -15,7 +15,9 @@ module Csvtool
                   chunk_size: context.fetch(:chunk_size),
                   output_directory: context[:output_directory],
                   file_prefix: context[:file_prefix],
-                  overwrite_existing: context.fetch(:overwrite_existing, false)
+                  overwrite_existing: context.fetch(:overwrite_existing, false),
+                  write_manifest: context.fetch(:write_manifest, false),
+                  manifest_path: context[:manifest_path]
                 )
                 nil
               end

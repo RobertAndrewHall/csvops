@@ -31,6 +31,7 @@ class TestCli < Minitest::Test
         "",
         "",
         "",
+        "",
         "7"
       ].join("\n") + "\n"
 

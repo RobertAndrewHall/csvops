@@ -21,6 +21,7 @@ module Csvtool
           sequence = 0
           data_rows = 0
           chunk_paths = []
+          chunk_row_counts = []
           rows_in_chunk = 0
           current_csv = nil
 
@@ -36,6 +37,7 @@ module Csvtool
               raise OutputFileExistsError.new(path) if File.exist?(path) && !overwrite_existing
 
               chunk_paths << path
+              chunk_row_counts << 0
               write_mode_headers = headers_present ? row.headers : nil
               current_csv = ::CSV.open(path, "w", write_headers: write_headers, headers: write_mode_headers, col_sep: col_sep)
             end
@@ -43,13 +45,15 @@ module Csvtool
             fields = headers_present ? row.fields : row
             current_csv << fields
             rows_in_chunk += 1
+            chunk_row_counts[-1] += 1
             data_rows += 1
           end
 
           {
             chunk_paths: chunk_paths,
             chunk_count: chunk_paths.length,
-            data_rows: data_rows
+            data_rows: data_rows,
+            chunk_row_counts: chunk_row_counts
           }
         ensure
           current_csv&.close unless current_csv&.closed?

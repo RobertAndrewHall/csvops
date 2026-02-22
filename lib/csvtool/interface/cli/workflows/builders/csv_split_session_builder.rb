@@ -10,7 +10,17 @@ module Csvtool
       module Workflows
         module Builders
           class CsvSplitSessionBuilder
-            def call(file_path:, col_sep:, headers_present:, chunk_size:, output_directory: nil, file_prefix: nil, overwrite_existing: false)
+            def call(
+              file_path:,
+              col_sep:,
+              headers_present:,
+              chunk_size:,
+              output_directory: nil,
+              file_prefix: nil,
+              overwrite_existing: false,
+              write_manifest: false,
+              manifest_path: nil
+            )
               source = Domain::CsvSplitSession::SplitSource.new(
                 path: file_path,
                 separator: col_sep,
@@ -20,7 +30,9 @@ module Csvtool
                 chunk_size: chunk_size,
                 output_directory: output_directory,
                 file_prefix: file_prefix,
-                overwrite_existing: overwrite_existing
+                overwrite_existing: overwrite_existing,
+                write_manifest: write_manifest,
+                manifest_path: manifest_path
               )
               Domain::CsvSplitSession::SplitSession.start(source: source, options: options)
             end

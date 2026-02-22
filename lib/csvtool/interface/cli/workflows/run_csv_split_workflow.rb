@@ -8,12 +8,14 @@ require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/chunk_size_prompt"
 require "csvtool/interface/cli/prompts/yes_no_prompt"
 require "csvtool/interface/cli/prompts/split_output_prompt"
+require "csvtool/interface/cli/prompts/split_manifest_prompt"
 require "csvtool/interface/cli/workflows/builders/csv_split_session_builder"
 require "csvtool/interface/cli/workflows/presenters/csv_split_presenter"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/interface/cli/workflows/steps/workflow_step_pipeline"
 require "csvtool/interface/cli/workflows/steps/csv_split/collect_inputs_step"
 require "csvtool/interface/cli/workflows/steps/csv_split/collect_output_step"
+require "csvtool/interface/cli/workflows/steps/csv_split/collect_manifest_step"
 require "csvtool/interface/cli/workflows/steps/csv_split/build_session_step"
 require "csvtool/interface/cli/workflows/steps/csv_split/execute_step"
 
@@ -49,6 +51,13 @@ module Csvtool
               ),
               Steps::CsvSplit::CollectOutputStep.new(
                 split_output_prompt: Interface::CLI::Prompts::SplitOutputPrompt.new(
+                  stdin: @stdin,
+                  stdout: @stdout,
+                  yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout)
+                )
+              ),
+              Steps::CsvSplit::CollectManifestStep.new(
+                split_manifest_prompt: Interface::CLI::Prompts::SplitManifestPrompt.new(
                   stdin: @stdin,
                   stdout: @stdout,
                   yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout)

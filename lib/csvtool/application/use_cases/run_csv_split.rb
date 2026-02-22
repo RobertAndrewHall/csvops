@@ -4,6 +4,7 @@ require "csv"
 require "fileutils"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/csv_splitter"
+require "csvtool/infrastructure/output/csv_split_manifest_writer"
 
 module Csvtool
   module Application
@@ -17,10 +18,12 @@ module Csvtool
 
         def initialize(
           header_reader: Infrastructure::CSV::HeaderReader.new,
-          csv_splitter: Infrastructure::CSV::CsvSplitter.new
+          csv_splitter: Infrastructure::CSV::CsvSplitter.new,
+          csv_split_manifest_writer: Infrastructure::Output::CsvSplitManifestWriter.new
         )
           @header_reader = header_reader
           @csv_splitter = csv_splitter
+          @csv_split_manifest_writer = csv_split_manifest_writer
         end
 
         def read_headers(file_path:, col_sep:, headers_present:)
@@ -52,7 +55,13 @@ module Csvtool
             file_prefix: file_prefix,
             overwrite_existing: session.options.overwrite_existing
           )
-          success(stats.merge(output_directory: output_directory, file_prefix: file_prefix))
+          manifest_path = maybe_write_manifest(
+            session: session,
+            output_directory: output_directory,
+            file_prefix: file_prefix,
+            stats: stats
+          )
+          success(stats.merge(output_directory: output_directory, file_prefix: file_prefix, manifest_path: manifest_path))
         rescue Infrastructure::CSV::CsvSplitter::OutputFileExistsError => e
           failure(:output_file_exists, path: e.path)
         rescue CSV::MalformedCSVError
@@ -69,6 +78,18 @@ module Csvtool
 
         def failure(code, data = {})
           Result.new(ok: false, error: code, data: data)
+        end
+
+        def maybe_write_manifest(session:, output_directory:, file_prefix:, stats:)
+          return nil unless session.options.write_manifest
+
+          manifest_path = session.options.manifest_path || File.join(output_directory, "#{file_prefix}_manifest.csv")
+          @csv_split_manifest_writer.call(
+            path: manifest_path,
+            chunk_paths: stats[:chunk_paths],
+            chunk_row_counts: stats[:chunk_row_counts]
+          )
+          manifest_path
         end
       end
     end
