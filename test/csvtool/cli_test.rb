@@ -400,6 +400,8 @@ class TestCli < Minitest::Test
       "5",
       fixture_path("sample_people.csv"),
       fixture_path("sample_people.csv"),
+      "",
+      "",
       "6"
     ].join("\n") + "\n"
 
@@ -410,6 +412,60 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Right CSV file path:"
     assert_includes output.string, "MATCH"
     assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+  end
+
+  def test_parity_workflow_supports_tsv_separator
+    output = StringIO.new
+    input = [
+      "5",
+      fixture_path("sample_people.tsv"),
+      fixture_path("parity_people_reordered.tsv"),
+      "2",
+      "",
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "MATCH"
+    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+  end
+
+  def test_parity_workflow_headerless_mode_compares_all_rows
+    output = StringIO.new
+    input = [
+      "5",
+      fixture_path("sample_people_no_headers.csv"),
+      fixture_path("sample_people_no_headers.csv"),
+      "",
+      "n",
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "MATCH"
+    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+  end
+
+  def test_parity_workflow_reports_header_mismatch_in_headered_mode
+    output = StringIO.new
+    input = [
+      "5",
+      fixture_path("sample_people.csv"),
+      fixture_path("parity_people_header_mismatch.csv"),
+      "",
+      "",
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "CSV headers do not match."
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 

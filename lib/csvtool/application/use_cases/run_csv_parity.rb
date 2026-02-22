@@ -2,6 +2,7 @@
 
 require "csv"
 require "csvtool/infrastructure/csv/csv_parity_comparator"
+require "csvtool/infrastructure/csv/header_reader"
 
 module Csvtool
   module Application
@@ -13,13 +14,27 @@ module Csvtool
           end
         end
 
-        def initialize(comparator: Infrastructure::CSV::CsvParityComparator.new)
+        def initialize(
+          comparator: Infrastructure::CSV::CsvParityComparator.new,
+          header_reader: Infrastructure::CSV::HeaderReader.new
+        )
           @comparator = comparator
+          @header_reader = header_reader
         end
 
         def call(left_path:, right_path:, col_sep: ",", headers_present: true)
           return failure(:file_not_found, path: left_path) unless File.file?(left_path)
           return failure(:file_not_found, path: right_path) unless File.file?(right_path)
+
+          if headers_present
+            left_headers = @header_reader.call(file_path: left_path, col_sep: col_sep)
+            return failure(:no_headers, path: left_path) if left_headers.empty?
+
+            right_headers = @header_reader.call(file_path: right_path, col_sep: col_sep)
+            return failure(:no_headers, path: right_path) if right_headers.empty?
+
+            return failure(:header_mismatch, left_headers: left_headers, right_headers: right_headers) unless left_headers == right_headers
+          end
 
           stats = @comparator.call(
             left_path: left_path,

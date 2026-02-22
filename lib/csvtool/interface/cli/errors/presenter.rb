@@ -72,6 +72,10 @@ module Csvtool
           def row_range_out_of_bounds(total_rows)
             @stdout.puts "Row range is out of bounds. File has #{total_rows} data rows."
           end
+
+          def header_mismatch
+            @stdout.puts "CSV headers do not match."
+          end
         end
       end
     end

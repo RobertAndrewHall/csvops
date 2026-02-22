@@ -3,6 +3,8 @@
 require "csvtool/application/use_cases/run_csv_parity"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/headers_present_prompt"
 
 module Csvtool
   module Interface
@@ -20,8 +22,18 @@ module Csvtool
             file_path_prompt = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout)
             left_path = file_path_prompt.call(label: "Left CSV file path: ")
             right_path = file_path_prompt.call(label: "Right CSV file path: ")
+            separator_prompt = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+            col_sep = separator_prompt.call
+            return nil if col_sep.nil?
 
-            result = @use_case.call(left_path: left_path, right_path: right_path)
+            headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout).call
+
+            result = @use_case.call(
+              left_path: left_path,
+              right_path: right_path,
+              col_sep: col_sep,
+              headers_present: headers_present
+            )
             return handle_error(result) unless result.ok?
 
             print_summary(result.data)
@@ -44,6 +56,10 @@ module Csvtool
               @errors.could_not_parse_csv
             when :cannot_read_file
               @errors.cannot_read_file(result.data[:path])
+            when :no_headers
+              @errors.no_headers
+            when :header_mismatch
+              @errors.header_mismatch
             else
               @stdout.puts "Unexpected parity validation failure."
             end

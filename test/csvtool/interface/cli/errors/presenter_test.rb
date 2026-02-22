@@ -24,6 +24,7 @@ class ErrorsPresenterTest < Minitest::Test
     presenter.invalid_end_row
     presenter.invalid_row_range_order
     presenter.row_range_out_of_bounds(3)
+    presenter.header_mismatch
 
     text = out.string
     assert_includes text, "File not found: /tmp/x.csv"
@@ -42,5 +43,6 @@ class ErrorsPresenterTest < Minitest::Test
     assert_includes text, "End row must be a positive integer."
     assert_includes text, "End row must be greater than or equal to start row."
     assert_includes text, "Row range is out of bounds. File has 3 data rows."
+    assert_includes text, "CSV headers do not match."
   end
 end

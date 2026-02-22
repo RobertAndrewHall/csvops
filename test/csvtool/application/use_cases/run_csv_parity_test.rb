@@ -43,4 +43,25 @@ class RunCsvParityTest < Minitest::Test
     assert_equal 1, result.data[:left_only_count]
     assert_equal 0, result.data[:right_only_count]
   end
+
+  def test_headered_mode_fails_when_headers_do_not_match
+    result = Csvtool::Application::UseCases::RunCsvParity.new.call(
+      left_path: fixture_path("sample_people.csv"),
+      right_path: fixture_path("parity_people_header_mismatch.csv")
+    )
+
+    assert_equal false, result.ok?
+    assert_equal :header_mismatch, result.error
+  end
+
+  def test_headerless_mode_compares_all_rows_as_data
+    result = Csvtool::Application::UseCases::RunCsvParity.new.call(
+      left_path: fixture_path("sample_people_no_headers.csv"),
+      right_path: fixture_path("sample_people_no_headers.csv"),
+      headers_present: false
+    )
+
+    assert_equal true, result.ok?
+    assert_equal true, result.data[:match]
+  end
 end
