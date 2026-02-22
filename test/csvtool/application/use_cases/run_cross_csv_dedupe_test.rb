@@ -13,7 +13,11 @@ class RunCrossCsvDedupeTest < Minitest::Test
     output = StringIO.new
     input = [
       fixture_path("dedupe_source.csv"),
+      "",
+      "",
       fixture_path("dedupe_reference.csv"),
+      "",
+      "",
       "customer_id",
       "external_id",
       ""
@@ -40,7 +44,11 @@ class RunCrossCsvDedupeTest < Minitest::Test
       output_path = File.join(dir, "deduped.csv")
       input = [
         fixture_path("dedupe_source.csv"),
+        "",
+        "",
         fixture_path("dedupe_reference.csv"),
+        "",
+        "",
         "customer_id",
         "external_id",
         "2",
@@ -53,5 +61,66 @@ class RunCrossCsvDedupeTest < Minitest::Test
       assert_equal "customer_id,name\n1,Alice\n3,Cara\n", File.read(output_path)
       assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
     end
+  end
+
+  def test_supports_tsv_separators
+    output = StringIO.new
+    input = [
+      fixture_path("dedupe_source.tsv"),
+      "2",
+      "",
+      fixture_path("dedupe_reference.tsv"),
+      "2",
+      "",
+      "customer_id",
+      "external_id",
+      ""
+    ].join("\n") + "\n"
+
+    Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
+
+    assert_includes output.string, "customer_id\tname"
+    assert_includes output.string, "1\tAlice"
+    assert_includes output.string, "3\tCara"
+  end
+
+  def test_headerless_mode_supports_column_index
+    output = StringIO.new
+    input = [
+      fixture_path("dedupe_source_no_headers.csv"),
+      "",
+      "n",
+      fixture_path("dedupe_reference_no_headers.csv"),
+      "",
+      "n",
+      "1",
+      "1",
+      ""
+    ].join("\n") + "\n"
+
+    Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
+
+    refute_includes output.string, "customer_id,name"
+    assert_includes output.string, "1,Alice"
+    assert_includes output.string, "3,Cara"
+    assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+  end
+
+  def test_reports_column_not_found_when_missing
+    output = StringIO.new
+    input = [
+      fixture_path("dedupe_source.csv"),
+      "",
+      "",
+      fixture_path("dedupe_reference.csv"),
+      "",
+      "",
+      "missing",
+      "external_id"
+    ].join("\n") + "\n"
+
+    Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
+
+    assert_includes output.string, "Column not found."
   end
 end

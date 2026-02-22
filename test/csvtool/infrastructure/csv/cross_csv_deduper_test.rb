@@ -14,9 +14,12 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     result = deduper.call(
       source_path: fixture_path("dedupe_source.csv"),
       reference_path: fixture_path("dedupe_reference.csv"),
-      source_column: "customer_id",
-      reference_column: "external_id",
-      col_sep: ","
+      source_selector: "customer_id",
+      reference_selector: "external_id",
+      source_col_sep: ",",
+      reference_col_sep: ",",
+      source_has_headers: true,
+      reference_has_headers: true
     )
 
     assert_equal ["customer_id", "name"], result[:headers]

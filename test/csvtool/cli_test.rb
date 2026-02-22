@@ -285,7 +285,11 @@ class TestCli < Minitest::Test
     input = [
       "4",
       fixture_path("dedupe_source.csv"),
+      "",
+      "",
       fixture_path("dedupe_reference.csv"),
+      "",
+      "",
       "customer_id",
       "external_id",
       "",
@@ -312,7 +316,11 @@ class TestCli < Minitest::Test
       input = [
         "4",
         fixture_path("dedupe_source.csv"),
+        "",
+        "",
         fixture_path("dedupe_reference.csv"),
+        "",
+        "",
         "customer_id",
         "external_id",
         "2",
@@ -327,6 +335,55 @@ class TestCli < Minitest::Test
       assert_equal "customer_id,name\n1,Alice\n3,Cara\n", File.read(output_path)
       assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
     end
+  end
+
+  def test_dedupe_workflow_supports_tsv_separators
+    output = StringIO.new
+    input = [
+      "4",
+      fixture_path("dedupe_source.tsv"),
+      "2",
+      "",
+      fixture_path("dedupe_reference.tsv"),
+      "2",
+      "",
+      "customer_id",
+      "external_id",
+      "",
+      "5"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "customer_id\tname"
+    assert_includes output.string, "1\tAlice"
+    assert_includes output.string, "3\tCara"
+  end
+
+  def test_dedupe_workflow_headerless_mode_supports_index
+    output = StringIO.new
+    input = [
+      "4",
+      fixture_path("dedupe_source_no_headers.csv"),
+      "",
+      "n",
+      fixture_path("dedupe_reference_no_headers.csv"),
+      "",
+      "n",
+      "1",
+      "1",
+      "",
+      "5"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    refute_includes output.string, "customer_id,name"
+    assert_includes output.string, "1,Alice"
+    assert_includes output.string, "3,Cara"
+    assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
   end
 
   def test_end_to_end_file_output_writes_expected_csv
