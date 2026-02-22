@@ -9,6 +9,7 @@ require "csvtool/interface/cli/prompts/skip_blanks_prompt"
 require "csvtool/interface/cli/prompts/confirm_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/interface/cli/workflows/builders/column_session_builder"
+require "csvtool/interface/cli/workflows/presenters/column_extraction_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/column_session/separator"
@@ -30,6 +31,7 @@ module Csvtool
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
             @session_builder = Builders::ColumnSessionBuilder.new
+            @presenter = Presenters::ColumnExtractionPresenter.new(stdout: @stdout)
             @output_destination_mapper = Support::OutputDestinationMapper.new
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
           end
@@ -67,10 +69,10 @@ module Csvtool
             return if output_destination.nil?
             session = session.with_output_destination(@output_destination_mapper.call(output_destination))
 
-            extract_result = @use_case.extract(session: session, on_value: ->(value) { @stdout.puts value })
+            extract_result = @use_case.extract(session: session, on_value: ->(value) { @presenter.print_value(value) })
             return handle_error(extract_result) unless extract_result.ok?
 
-            @stdout.puts "Wrote output to #{extract_result.data[:output_path]}" if session.output_destination.file?
+            @presenter.print_file_written(extract_result.data[:output_path]) if session.output_destination.file?
           rescue ArgumentError => e
             return @errors.empty_output_path if e.message == "file output path cannot be empty"
 
