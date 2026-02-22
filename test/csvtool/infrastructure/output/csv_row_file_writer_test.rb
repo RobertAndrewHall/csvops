@@ -2,7 +2,6 @@
 
 require_relative "../../../test_helper"
 require "csvtool/infrastructure/output/csv_row_file_writer"
-require "csvtool/interface/cli/errors/presenter"
 require "tmpdir"
 
 class InfrastructureCsvRowFileWriterTest < Minitest::Test
@@ -15,10 +14,7 @@ class InfrastructureCsvRowFileWriterTest < Minitest::Test
   end
 
   def test_writes_header_and_rows_to_file
-    stdout = StringIO.new
     writer = Csvtool::Infrastructure::Output::CsvRowFileWriter.new(
-      stdout: stdout,
-      errors: Csvtool::Interface::CLI::Errors::Presenter.new(stdout: stdout),
       row_streamer: FakeRowStreamer.new
     )
 
@@ -35,6 +31,7 @@ class InfrastructureCsvRowFileWriterTest < Minitest::Test
 
       assert_equal "name,city\nBob,Paris\nCara,Berlin\n", File.read(output_path)
       assert_equal true, stats[:matched]
+      assert_equal true, stats[:wrote_rows]
     end
   end
 end

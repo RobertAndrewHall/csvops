@@ -3,6 +3,7 @@
 require "csv"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_streamer"
+require "csvtool/infrastructure/output/csv_row_file_writer"
 
 module Csvtool
   module Application
@@ -16,10 +17,12 @@ module Csvtool
 
         def initialize(
           header_reader: Infrastructure::CSV::HeaderReader.new,
-          row_streamer: Infrastructure::CSV::RowStreamer.new
+          row_streamer: Infrastructure::CSV::RowStreamer.new,
+          csv_row_file_writer: nil
         )
           @header_reader = header_reader
           @row_streamer = row_streamer
+          @csv_row_file_writer = csv_row_file_writer || Infrastructure::Output::CsvRowFileWriter.new(row_streamer: @row_streamer)
         end
 
         def read_headers(file_path:, col_sep:)
@@ -37,7 +40,7 @@ module Csvtool
 
         def extract(session:, headers:, on_row: nil)
           if session.output_destination.file?
-            write_file(
+            stats = @csv_row_file_writer.call(
               output_path: session.output_destination.path,
               file_path: session.source.path,
               col_sep: session.source.separator,
@@ -45,6 +48,7 @@ module Csvtool
               start_row: session.row_range.start_row,
               end_row: session.row_range.end_row
             )
+            success(stats.merge(output_path: session.output_destination.path))
           else
             stats = @row_streamer.each_in_range(
               file_path: session.source.path,
@@ -56,36 +60,15 @@ module Csvtool
           end
         rescue CSV::MalformedCSVError
           failure(:could_not_parse_csv)
-        rescue Errno::EACCES
-          failure(:cannot_read_file, path: session.source.path)
+        rescue Errno::EACCES, Errno::ENOENT => e
+          if session.output_destination.file?
+            failure(:cannot_write_output_file, path: session.output_destination.path, error_class: e.class)
+          else
+            failure(:cannot_read_file, path: session.source.path)
+          end
         end
 
         private
-
-        def write_file(output_path:, file_path:, col_sep:, headers:, start_row:, end_row:)
-          csv = nil
-          wrote_rows = false
-
-          stats = @row_streamer.each_in_range(
-            file_path: file_path,
-            col_sep: col_sep,
-            start_row: start_row,
-            end_row: end_row
-          ) do |fields|
-            unless wrote_rows
-              csv = ::CSV.open(output_path, "w")
-              csv << headers
-              wrote_rows = true
-            end
-            csv << fields
-          end
-
-          success(stats.merge(wrote_rows: wrote_rows, output_path: output_path))
-        rescue Errno::EACCES, Errno::ENOENT => e
-          failure(:cannot_write_output_file, path: output_path, error_class: e.class)
-        ensure
-          csv&.close unless csv&.closed?
-        end
 
         def success(data)
           Result.new(ok: true, error: nil, data: data)

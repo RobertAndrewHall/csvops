@@ -6,9 +6,7 @@ module Csvtool
   module Infrastructure
     module Output
       class CsvRowFileWriter
-        def initialize(stdout:, errors:, row_streamer:)
-          @stdout = stdout
-          @errors = errors
+        def initialize(row_streamer:)
           @row_streamer = row_streamer
         end
 
@@ -30,12 +28,7 @@ module Csvtool
             csv << fields
           end
 
-          csv&.close
-          @stdout.puts "Wrote output to #{output_path}" if wrote_rows
-          stats
-        rescue Errno::EACCES, Errno::ENOENT => e
-          @errors.cannot_write_output_file(output_path, e.class)
-          nil
+          stats.merge(wrote_rows: wrote_rows)
         ensure
           csv&.close unless csv&.closed?
         end
