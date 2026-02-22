@@ -8,6 +8,7 @@ require "csvtool/interface/cli/prompts/column_selector_prompt"
 require "csvtool/interface/cli/prompts/skip_blanks_prompt"
 require "csvtool/interface/cli/prompts/confirm_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
+require "csvtool/interface/cli/workflows/builders/column_session_builder"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/column_session/separator"
@@ -28,6 +29,7 @@ module Csvtool
             @stdout = stdout
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @session_builder = Builders::ColumnSessionBuilder.new
             @output_destination_mapper = Support::OutputDestinationMapper.new
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
           end
@@ -45,7 +47,7 @@ module Csvtool
             return if column_name.nil?
             skip_blanks = Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout).call
 
-            session = build_session(file_path: file_path, col_sep: col_sep, column_name: column_name, skip_blanks: skip_blanks)
+            session = @session_builder.call(file_path: file_path, col_sep: col_sep, column_name: column_name, skip_blanks: skip_blanks)
             preview_result = @use_case.preview(session: session)
             return handle_error(preview_result) unless preview_result.ok?
             preview = Domain::ColumnSession::Preview.new(
@@ -76,19 +78,6 @@ module Csvtool
           end
 
           private
-
-          def build_session(file_path:, col_sep:, column_name:, skip_blanks:)
-            separator = Domain::ColumnSession::Separator.new(col_sep)
-            source = Domain::ColumnSession::CsvSource.new(path: file_path, separator: separator)
-            column_selection = Domain::ColumnSession::ColumnSelection.new(name: column_name)
-            options = Domain::ColumnSession::ExtractionOptions.new(skip_blanks: skip_blanks, preview_limit: 10)
-
-            Domain::ColumnSession::ColumnSession.start(
-              source: source,
-              column_selection: column_selection,
-              options: options
-            )
-          end
 
           def handle_error(result)
             @result_error_handler.call(result, {

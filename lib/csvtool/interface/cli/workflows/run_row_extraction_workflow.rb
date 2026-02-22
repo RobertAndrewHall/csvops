@@ -6,11 +6,10 @@ require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
+require "csvtool/interface/cli/workflows/builders/row_extraction_session_builder"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/row_session/row_range"
-require "csvtool/domain/row_session/row_source"
-require "csvtool/domain/row_session/row_session"
 module Csvtool
   module Interface
     module CLI
@@ -21,6 +20,7 @@ module Csvtool
             @stdout = stdout
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @session_builder = Builders::RowExtractionSessionBuilder.new
             @output_destination_mapper = Support::OutputDestinationMapper.new
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
           end
@@ -50,7 +50,7 @@ module Csvtool
             ).call
             return if output_destination.nil?
 
-            session = build_session(
+            session = @session_builder.call(
               file_path: file_path,
               col_sep: col_sep,
               row_range: row_range,
@@ -88,12 +88,6 @@ module Csvtool
           end
 
           private
-
-          def build_session(file_path:, col_sep:, row_range:, destination:)
-            source = Domain::RowSession::RowSource.new(path: file_path, separator: col_sep)
-            session = Domain::RowSession::RowSession.start(source: source, row_range: row_range)
-            session.with_output_destination(destination)
-          end
 
           def handle_error(result)
             @result_error_handler.call(result, {

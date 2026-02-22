@@ -9,13 +9,11 @@ require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/yes_no_prompt"
 require "csvtool/interface/cli/prompts/dedupe_key_selector_prompt"
+require "csvtool/interface/cli/workflows/builders/cross_csv_dedupe_session_builder"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
 require "csvtool/domain/cross_csv_dedupe_session/column_selector"
-require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
-require "csvtool/domain/cross_csv_dedupe_session/match_options"
-require "csvtool/domain/cross_csv_dedupe_session/cross_csv_dedupe_session"
 module Csvtool
   module Interface
     module CLI
@@ -26,6 +24,7 @@ module Csvtool
             @stdout = stdout
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @session_builder = Builders::CrossCsvDedupeSessionBuilder.new
             @output_destination_mapper = Support::OutputDestinationMapper.new
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
           end
@@ -70,28 +69,22 @@ module Csvtool
             trim_whitespace = yes_no_prompt.call(label: "Trim whitespace before matching? [Y/n]: ", default: true)
             case_insensitive = yes_no_prompt.call(label: "Case-insensitive matching? [y/N]: ", default: false)
 
-            key_mapping = Domain::CrossCsvDedupeSession::KeyMapping.new(
-              source_selector: source_selector,
-              reference_selector: reference_selector
-            )
-            match_options = Domain::CrossCsvDedupeSession::MatchOptions.new(
-              trim_whitespace: trim_whitespace,
-              case_insensitive: case_insensitive
-            )
-            session = Domain::CrossCsvDedupeSession::CrossCsvDedupeSession.start(
-              source: source,
-              reference: reference,
-              key_mapping: key_mapping,
-              match_options: match_options
-            )
-
             output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
               stdin: @stdin,
               stdout: @stdout,
               errors: @errors
             ).call
             return if output_destination.nil?
-            session = session.with_output_destination(@output_destination_mapper.call(output_destination))
+
+            session = @session_builder.call(
+              source: source,
+              reference: reference,
+              source_selector: source_selector,
+              reference_selector: reference_selector,
+              trim_whitespace: trim_whitespace,
+              case_insensitive: case_insensitive,
+              destination: @output_destination_mapper.call(output_destination)
+            )
 
             result = @use_case.call(
               session: session,
