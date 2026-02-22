@@ -13,7 +13,7 @@ class TestCli < Minitest::Test
 
   def test_menu_can_exit_cleanly
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("8\n"), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("8\n"), stdout: output, stderr: output)
     assert_equal 0, status
     assert_includes output.string, "CSV Tool Menu"
   end
@@ -29,7 +29,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "CSV Stats Summary"
@@ -49,7 +49,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "File not found: /tmp/does-not-exist.csv"
@@ -71,7 +71,7 @@ class TestCli < Minitest::Test
         "8"
       ].join("\n") + "\n"
 
-      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
       assert_equal 0, status
       assert_includes output.string, "Wrote output to #{output_path}"
@@ -99,7 +99,7 @@ class TestCli < Minitest::Test
         "8"
       ].join("\n") + "\n"
 
-      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
       assert_equal 0, status
       assert_includes output.string, "Chunks written: 3"
@@ -120,7 +120,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Chunk size must be a positive integer."
@@ -141,7 +141,7 @@ class TestCli < Minitest::Test
     ].join("\n") + "\n"
 
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_match(/\nAlice\nBob\nCara\n/, output.string)
@@ -347,6 +347,33 @@ class TestCli < Minitest::Test
     assert_includes stderr.string, "Invalid color mode: sometimes"
   end
 
+  def test_menu_workflow_routes_ui_to_stderr_and_data_to_stdout
+    stdout = StringIO.new
+    stderr = StringIO.new
+    input = [
+      "7",
+      fixture_path("sample_people.csv"),
+      "",
+      "",
+      "",
+      "8"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(
+      ["menu"],
+      stdin: StringIO.new(input),
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 0, status
+    assert_includes stderr.string, "CSV Tool Menu"
+    assert_includes stderr.string, "CSV file path:"
+    assert_includes stdout.string, "CSV Stats Summary"
+    refute_includes stdout.string, "CSV Tool Menu"
+    refute_includes stdout.string, "CSV file path:"
+  end
+
   def test_stats_command_table_respects_narrow_terminal_width
     stdout = StringIO.new
     stderr = StringIO.new
@@ -383,7 +410,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "name,city"
@@ -404,7 +431,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Start row must be a positive integer."
@@ -423,7 +450,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "name,city"
@@ -444,7 +471,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "name,city"
@@ -469,7 +496,7 @@ class TestCli < Minitest::Test
         "8"
       ].join("\n") + "\n"
 
-      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
       assert_equal 0, status
       assert_equal "name,city\nBob,Paris\nCara,Berlin\n", File.read(output_path)
     end
@@ -489,7 +516,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Alice,London"
@@ -509,7 +536,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "name,city"
@@ -534,7 +561,7 @@ class TestCli < Minitest::Test
         "8"
       ].join("\n") + "\n"
 
-      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
       assert_equal 0, status
       assert_includes output.string, "Wrote output to #{output_path}"
@@ -556,7 +583,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "name\tcity"
@@ -575,7 +602,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     refute_includes output.string, "name,city"
@@ -595,7 +622,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Seed must be an integer."
@@ -620,7 +647,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Reference CSV file path:"
@@ -654,7 +681,7 @@ class TestCli < Minitest::Test
       "8"
       ].join("\n") + "\n"
 
-      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
       assert_equal 0, status
       assert_includes output.string, "Wrote output to #{output_path}"
@@ -681,7 +708,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "customer_id\tname"
@@ -707,7 +734,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     refute_includes output.string, "customer_id,name"
@@ -727,7 +754,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Left CSV file path:"
@@ -748,7 +775,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "MATCH"
@@ -766,7 +793,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "MATCH"
@@ -784,7 +811,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "CSV headers do not match."
@@ -802,7 +829,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "MISMATCH"
@@ -824,7 +851,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "File not found: /tmp/not-there-left.csv"
@@ -843,7 +870,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "File not found: /tmp/not-there-right.csv"
@@ -862,7 +889,7 @@ class TestCli < Minitest::Test
       "8"
     ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Could not parse CSV file."
@@ -889,7 +916,7 @@ class TestCli < Minitest::Test
         "8"
       ].join("\n") + "\n"
 
-      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
       assert_equal 0, status
       assert_equal "name\nAlice\nBob\nCara\n", File.read(output_path)
     end
@@ -910,7 +937,7 @@ class TestCli < Minitest::Test
     ].join("\n") + "\n"
 
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Canceled."
@@ -923,7 +950,7 @@ class TestCli < Minitest::Test
       ["menu"],
       stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n4\n7\n"),
       stdout: output,
-      stderr: StringIO.new
+      stderr: output
     )
 
     assert_equal 0, status
@@ -946,7 +973,7 @@ class TestCli < Minitest::Test
     ].join("\n") + "\n"
 
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
     assert_equal 0, status
     assert_includes output.string, "Cannot write output file: /tmp/not-a-dir/out.csv"

@@ -20,11 +20,12 @@ module Csvtool
     module CLI
       module Workflows
         class RunRowRandomizationWorkflow
-          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunRowRandomization.new)
+          def initialize(stdin:, stdout:, stderr: stdout, use_case: Application::UseCases::RunRowRandomization.new)
             @stdin = stdin
             @stdout = stdout
+            @stderr = stderr
             @use_case = use_case
-            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
             @session_builder = Builders::RowRandomizationSessionBuilder.new
             @output_destination_mapper = Support::OutputDestinationMapper.new
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
@@ -41,15 +42,15 @@ module Csvtool
 
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::RowRandomization::CollectInputsStep.new(
-                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
-                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
-                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
-                seed_prompt: Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stderr),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stderr),
+                seed_prompt: Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors)
               ),
               Steps::RowRandomization::CollectDestinationStep.new(
                 output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
                   stdin: @stdin,
-                  stdout: @stdout,
+                  stdout: @stderr,
                   errors: @errors
                 )
               ),

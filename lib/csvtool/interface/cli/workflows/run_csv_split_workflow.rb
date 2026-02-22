@@ -24,11 +24,12 @@ module Csvtool
     module CLI
       module Workflows
         class RunCsvSplitWorkflow
-          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunCsvSplit.new)
+          def initialize(stdin:, stdout:, stderr: stdout, use_case: Application::UseCases::RunCsvSplit.new)
             @stdin = stdin
             @stdout = stdout
+            @stderr = stderr
             @use_case = use_case
-            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
             @session_builder = Builders::CsvSplitSessionBuilder.new
             @presenter = Presenters::CsvSplitPresenter.new(stdout: stdout)
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
@@ -43,24 +44,24 @@ module Csvtool
             }
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::CsvSplit::CollectInputsStep.new(
-                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
-                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
-                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
-                chunk_size_prompt: Interface::CLI::Prompts::ChunkSizePrompt.new(stdin: @stdin, stdout: @stdout),
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stderr),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stderr),
+                chunk_size_prompt: Interface::CLI::Prompts::ChunkSizePrompt.new(stdin: @stdin, stdout: @stderr),
                 errors: @errors
               ),
               Steps::CsvSplit::CollectOutputStep.new(
                 split_output_prompt: Interface::CLI::Prompts::SplitOutputPrompt.new(
                   stdin: @stdin,
-                  stdout: @stdout,
-                  yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout)
+                  stdout: @stderr,
+                  yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stderr)
                 )
               ),
               Steps::CsvSplit::CollectManifestStep.new(
                 split_manifest_prompt: Interface::CLI::Prompts::SplitManifestPrompt.new(
                   stdin: @stdin,
-                  stdout: @stdout,
-                  yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout)
+                  stdout: @stderr,
+                  yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stderr)
                 )
               ),
               Steps::CsvSplit::BuildSessionStep.new,

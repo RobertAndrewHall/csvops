@@ -12,6 +12,7 @@ require "csvtool/interface/cli/workflows/run_csv_split_workflow"
 require "csvtool/interface/cli/workflows/run_csv_stats_workflow"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/output/table_renderer"
+require "csvtool/interface/cli/output/streams"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
 require "csvtool/infrastructure/output/console_writer"
@@ -63,16 +64,18 @@ module Csvtool
     private
 
     def run_menu_loop
-      extract_column_action = -> { Interface::CLI::Workflows::RunExtractionWorkflow.new(stdin: @stdin, stdout: @stdout).call }
-      extract_rows_action = -> { Interface::CLI::Workflows::RunRowExtractionWorkflow.new(stdin: @stdin, stdout: @stdout).call }
-      randomize_rows_action = -> { Interface::CLI::Workflows::RunRowRandomizationWorkflow.new(stdin: @stdin, stdout: @stdout).call }
-      dedupe_action = -> { Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow.new(stdin: @stdin, stdout: @stdout).call }
-      parity_action = -> { Interface::CLI::Workflows::RunCsvParityWorkflow.new(stdin: @stdin, stdout: @stdout).call }
-      split_action = -> { Interface::CLI::Workflows::RunCsvSplitWorkflow.new(stdin: @stdin, stdout: @stdout).call }
-      stats_action = -> { Interface::CLI::Workflows::RunCsvStatsWorkflow.new(stdin: @stdin, stdout: @stdout).call }
+      streams = Interface::CLI::Output::Streams.build(data: @stdout, ui: @stderr)
+      extract_column_action = -> { Interface::CLI::Workflows::RunExtractionWorkflow.new(stdin: @stdin, stdout: streams.data, stderr: streams.ui).call }
+      extract_rows_action = -> { Interface::CLI::Workflows::RunRowExtractionWorkflow.new(stdin: @stdin, stdout: streams.data, stderr: streams.ui).call }
+      randomize_rows_action = -> { Interface::CLI::Workflows::RunRowRandomizationWorkflow.new(stdin: @stdin, stdout: streams.data, stderr: streams.ui).call }
+      dedupe_action = -> { Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow.new(stdin: @stdin, stdout: streams.data, stderr: streams.ui).call }
+      parity_action = -> { Interface::CLI::Workflows::RunCsvParityWorkflow.new(stdin: @stdin, stdout: streams.data, stderr: streams.ui).call }
+      split_action = -> { Interface::CLI::Workflows::RunCsvSplitWorkflow.new(stdin: @stdin, stdout: streams.data, stderr: streams.ui).call }
+      stats_action = -> { Interface::CLI::Workflows::RunCsvStatsWorkflow.new(stdin: @stdin, stdout: streams.data, stderr: streams.ui).call }
       Interface::CLI::MenuLoop.new(
         stdin: @stdin,
-        stdout: @stdout,
+        stdout: streams.data,
+        stderr: streams.ui,
         menu_options: MENU_OPTIONS,
         extract_column_action: extract_column_action,
         extract_rows_action: extract_rows_action,
@@ -99,7 +102,7 @@ module Csvtool
         return 1
       end
 
-      errors = Interface::CLI::Errors::Presenter.new(stdout: @stdout)
+      errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
       return errors.file_not_found(file_path) || 1 unless File.file?(file_path)
 
       header_reader = Infrastructure::CSV::HeaderReader.new

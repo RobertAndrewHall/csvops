@@ -21,11 +21,12 @@ module Csvtool
     module CLI
       module Workflows
         class RunCsvStatsWorkflow
-          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunCsvStats.new)
+          def initialize(stdin:, stdout:, stderr: stdout, use_case: Application::UseCases::RunCsvStats.new)
             @stdin = stdin
             @stdout = stdout
+            @stderr = stderr
             @use_case = use_case
-            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
             @session_builder = Builders::CsvStatsSessionBuilder.new
             @presenter = Presenters::CsvStatsPresenter.new(stdout: stdout)
             @output_destination_mapper = Support::OutputDestinationMapper.new
@@ -42,14 +43,14 @@ module Csvtool
             }
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::CsvStats::CollectInputsStep.new(
-                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
-                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
-                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stderr),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stderr)
               ),
               Steps::CsvStats::CollectDestinationStep.new(
                 output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
                   stdin: @stdin,
-                  stdout: @stdout,
+                  stdout: @stderr,
                   errors: @errors
                 )
               ),

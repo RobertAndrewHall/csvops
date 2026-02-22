@@ -23,11 +23,12 @@ module Csvtool
     module CLI
       module Workflows
         class RunExtractionWorkflow
-          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunExtraction.new)
+          def initialize(stdin:, stdout:, stderr: stdout, use_case: Application::UseCases::RunExtraction.new)
             @stdin = stdin
             @stdout = stdout
+            @stderr = stderr
             @use_case = use_case
-            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
             @session_builder = Builders::ColumnSessionBuilder.new
             @presenter = Presenters::ColumnExtractionPresenter.new(stdout: @stdout)
             @output_destination_mapper = Support::OutputDestinationMapper.new
@@ -45,18 +46,18 @@ module Csvtool
 
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::Extraction::CollectInputsStep.new(
-                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
-                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
-                column_selector_prompt: Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
-                skip_blanks_prompt: Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout)
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stderr),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors),
+                column_selector_prompt: Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors),
+                skip_blanks_prompt: Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stderr)
               ),
               Steps::Extraction::BuildPreviewStep.new(
-                confirm_prompt: Interface::CLI::Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+                confirm_prompt: Interface::CLI::Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors)
               ),
               Steps::Extraction::CollectDestinationStep.new(
                 output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
                   stdin: @stdin,
-                  stdout: @stdout,
+                  stdout: @stderr,
                   errors: @errors
                 )
               ),

@@ -23,11 +23,12 @@ module Csvtool
     module CLI
       module Workflows
         class RunCrossCsvDedupeWorkflow
-          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunCrossCsvDedupe.new)
+          def initialize(stdin:, stdout:, stderr: stdout, use_case: Application::UseCases::RunCrossCsvDedupe.new)
             @stdin = stdin
             @stdout = stdout
+            @stderr = stderr
             @use_case = use_case
-            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
             @session_builder = Builders::CrossCsvDedupeSessionBuilder.new
             @output_destination_mapper = Support::OutputDestinationMapper.new
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
@@ -44,17 +45,17 @@ module Csvtool
 
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::CrossCsvDedupe::CollectProfilesStep.new(
-                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
-                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
-                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stderr),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stderr),
                 errors: @errors
               ),
               Steps::CrossCsvDedupe::CollectOptionsStep.new(
-                selector_prompt: Interface::CLI::Prompts::DedupeKeySelectorPrompt.new(stdin: @stdin, stdout: @stdout),
-                yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout),
+                selector_prompt: Interface::CLI::Prompts::DedupeKeySelectorPrompt.new(stdin: @stdin, stdout: @stderr),
+                yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stderr),
                 output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
                   stdin: @stdin,
-                  stdout: @stdout,
+                  stdout: @stderr,
                   errors: @errors
                 ),
                 errors: @errors

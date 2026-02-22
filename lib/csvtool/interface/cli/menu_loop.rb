@@ -4,9 +4,10 @@ module Csvtool
   module Interface
     module CLI
       class MenuLoop
-        def initialize(stdin:, stdout:, menu_options:, extract_column_action:, extract_rows_action:, randomize_rows_action:, dedupe_action:, parity_action:, split_action:, stats_action:)
+        def initialize(stdin:, stdout:, stderr: stdout, menu_options:, extract_column_action:, extract_rows_action:, randomize_rows_action:, dedupe_action:, parity_action:, split_action:, stats_action:)
           @stdin = stdin
           @stdout = stdout
+          @stderr = stderr
           @menu_options = menu_options
           @extract_column_action = extract_column_action
           @extract_rows_action = extract_rows_action
@@ -20,7 +21,7 @@ module Csvtool
         def run
           loop do
             print_menu
-            @stdout.print "> "
+            @stderr.print "> "
             choice = @stdin.gets
             return 0 if choice.nil?
 
@@ -42,7 +43,7 @@ module Csvtool
             when "8"
               return 0
             else
-              @stdout.puts "Please choose 1, 2, 3, 4, 5, 6, 7, or 8."
+              @stderr.puts "Please choose 1, 2, 3, 4, 5, 6, 7, or 8."
             end
           end
         end
@@ -50,9 +51,9 @@ module Csvtool
         private
 
         def print_menu
-          @stdout.puts "CSV Tool Menu"
+          @stderr.puts "CSV Tool Menu"
           @menu_options.each_with_index do |option, index|
-            @stdout.puts "#{index + 1}. #{option}"
+            @stderr.puts "#{index + 1}. #{option}"
           end
         end
       end

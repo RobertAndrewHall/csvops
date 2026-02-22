@@ -21,11 +21,12 @@ module Csvtool
     module CLI
       module Workflows
         class RunRowExtractionWorkflow
-          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunRowExtraction.new)
+          def initialize(stdin:, stdout:, stderr: stdout, use_case: Application::UseCases::RunRowExtraction.new)
             @stdin = stdin
             @stdout = stdout
+            @stderr = stderr
             @use_case = use_case
-            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
             @session_builder = Builders::RowExtractionSessionBuilder.new
             @output_destination_mapper = Support::OutputDestinationMapper.new
             @result_error_handler = Support::ResultErrorHandler.new(errors: @errors)
@@ -41,15 +42,15 @@ module Csvtool
 
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::RowExtraction::CollectSourceStep.new(
-                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
-                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stderr),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stderr, errors: @errors)
               ),
               Steps::RowExtraction::ReadHeadersStep.new,
-              Steps::RowExtraction::CollectRangeStep.new(stdin: @stdin, stdout: @stdout),
+              Steps::RowExtraction::CollectRangeStep.new(stdin: @stdin, stdout: @stderr),
               Steps::RowExtraction::CollectDestinationStep.new(
                 output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
                   stdin: @stdin,
-                  stdout: @stdout,
+                  stdout: @stderr,
                   errors: @errors
                 )
               ),
