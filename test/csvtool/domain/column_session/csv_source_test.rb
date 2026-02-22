@@ -11,4 +11,14 @@ class CsvSourceTest < Minitest::Test
     assert_equal "/tmp/a.csv", source.path
     assert_equal separator, source.separator
   end
+
+  def test_rejects_empty_path
+    separator = Csvtool::Domain::ColumnSession::Separator.new(",")
+
+    error = assert_raises(ArgumentError) do
+      Csvtool::Domain::ColumnSession::CsvSource.new(path: "", separator: separator)
+    end
+
+    assert_equal "path cannot be empty", error.message
+  end
 end

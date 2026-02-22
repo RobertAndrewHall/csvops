@@ -74,8 +74,6 @@ module Csvtool
           @stdout.print "Case-insensitive matching? [y/N]: "
           case_insensitive = read_yes_no(default: false)
 
-          return if source_path.empty? || reference_path.empty? || source_column.empty? || reference_column.empty?
-
           source_selector = resolve_selector(
             column_input: source_column,
             profile: source

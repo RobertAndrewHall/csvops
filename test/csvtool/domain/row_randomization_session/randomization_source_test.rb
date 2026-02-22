@@ -17,12 +17,26 @@ class RandomizationSourceTest < Minitest::Test
   end
 
   def test_rejects_empty_separator
-    assert_raises(ArgumentError) do
+    error = assert_raises(ArgumentError) do
       Csvtool::Domain::RowRandomizationSession::RandomizationSource.new(
         path: "/tmp/a.csv",
         separator: "",
         headers_present: true
       )
     end
+
+    assert_equal "separator cannot be empty", error.message
+  end
+
+  def test_rejects_empty_path
+    error = assert_raises(ArgumentError) do
+      Csvtool::Domain::RowRandomizationSession::RandomizationSource.new(
+        path: "",
+        separator: ",",
+        headers_present: true
+      )
+    end
+
+    assert_equal "path cannot be empty", error.message
   end
 end
