@@ -11,6 +11,12 @@ require "csvtool/domain/shared/output_destination"
 require "tmpdir"
 
 class RunCrossCsvDedupeTest < Minitest::Test
+  class RaisingWriter
+    def call(**_kwargs)
+      raise Errno::ENOENT
+    end
+  end
+
   def fixture_path(name)
     File.expand_path("../../../fixtures/#{name}", __dir__)
   end
@@ -76,6 +82,28 @@ class RunCrossCsvDedupeTest < Minitest::Test
 
     assert_equal false, result.ok?
     assert_equal :column_not_found, result.error
+  end
+
+  def test_returns_cannot_write_output_file_when_writer_fails
+    use_case = Csvtool::Application::UseCases::RunCrossCsvDedupe.new(
+      csv_cross_csv_dedupe_file_writer: RaisingWriter.new
+    )
+    output_path = "/tmp/deduped.csv"
+
+    result = use_case.call(
+      session: build_session(
+        source_path: fixture_path("dedupe_source.csv"),
+        reference_path: fixture_path("dedupe_reference.csv"),
+        source_selector_input: "customer_id",
+        reference_selector_input: "external_id",
+        output_destination: Csvtool::Domain::Shared::OutputDestination.file(path: output_path)
+      )
+    )
+
+    refute result.ok?
+    assert_equal :cannot_write_output_file, result.error
+    assert_equal output_path, result.data[:path]
+    assert_equal Errno::ENOENT, result.data[:error_class]
   end
 
   private
