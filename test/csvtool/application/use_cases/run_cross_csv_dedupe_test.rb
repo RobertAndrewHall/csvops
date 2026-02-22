@@ -123,4 +123,44 @@ class RunCrossCsvDedupeTest < Minitest::Test
 
     assert_includes output.string, "Column not found."
   end
+
+  def test_reports_when_no_rows_were_removed
+    output = StringIO.new
+    input = [
+      fixture_path("dedupe_source.csv"),
+      "",
+      "",
+      fixture_path("dedupe_reference_none.csv"),
+      "",
+      "",
+      "customer_id",
+      "external_id",
+      ""
+    ].join("\n") + "\n"
+
+    Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
+
+    assert_includes output.string, "Summary: source_rows=5 removed_rows=0 kept_rows=5"
+    assert_includes output.string, "No rows removed; no matching keys found."
+  end
+
+  def test_reports_when_all_rows_were_removed
+    output = StringIO.new
+    input = [
+      fixture_path("dedupe_source.csv"),
+      "",
+      "",
+      fixture_path("dedupe_reference_all.csv"),
+      "",
+      "",
+      "customer_id",
+      "external_id",
+      ""
+    ].join("\n") + "\n"
+
+    Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
+
+    assert_includes output.string, "Summary: source_rows=5 removed_rows=5 kept_rows=0"
+    assert_includes output.string, "All source rows were removed by dedupe."
+  end
 end

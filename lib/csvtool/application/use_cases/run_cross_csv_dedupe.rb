@@ -24,6 +24,7 @@ module Csvtool
         def call
           source_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
           return @errors.file_not_found(source_path) unless File.file?(source_path)
+          current_read_path = source_path
           @stdout.puts "Source CSV separator:"
           source_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if source_col_sep.nil?
@@ -33,6 +34,7 @@ module Csvtool
           @stdout.print "Reference CSV file path: "
           reference_path = @stdin.gets&.strip.to_s
           return @errors.file_not_found(reference_path) unless File.file?(reference_path)
+          current_read_path = reference_path
           @stdout.puts "Reference CSV separator:"
           reference_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
           return if reference_col_sep.nil?
@@ -70,6 +72,7 @@ module Csvtool
           )
           return @errors.column_not_found if reference_selector.nil?
 
+          current_read_path = source_path
           result = @deduper.call(
             source_path: source_path,
             reference_path: reference_path,
@@ -94,10 +97,12 @@ module Csvtool
             print_to_console(result[:headers], result[:kept_rows], col_sep: source_col_sep)
           end
           @stdout.puts "Summary: source_rows=#{result[:source_rows]} removed_rows=#{result[:removed_rows]} kept_rows=#{result[:kept_rows_count]}"
+          @stdout.puts "No rows removed; no matching keys found." if result[:removed_rows].zero?
+          @stdout.puts "All source rows were removed by dedupe." if result[:source_rows].positive? && result[:kept_rows_count].zero?
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
         rescue Errno::EACCES
-          @errors.cannot_read_file(source_path)
+          @errors.cannot_read_file(current_read_path || source_path)
         end
 
         private
