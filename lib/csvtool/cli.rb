@@ -13,6 +13,8 @@ require "csvtool/interface/cli/workflows/run_csv_stats_workflow"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/output/table_renderer"
 require "csvtool/interface/cli/output/streams"
+require "csvtool/interface/cli/output/color_policy"
+require "csvtool/interface/cli/output/colorizer"
 require "csvtool/interface/cli/output/formatters/stats_formatter"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
@@ -193,44 +195,29 @@ module Csvtool
 
     def print_stats_output(output, format:, color_mode:)
       if format == "text"
-        use_color = color_enabled?(color_mode)
-        text = apply_text_color(output, enabled: use_color)
+        policy = Interface::CLI::Output::ColorPolicy.new(mode: color_mode, io: @stdout, env: @env)
+        colorizer = Interface::CLI::Output::Colorizer.new(policy: policy)
+        text = apply_text_color(output, colorizer: colorizer)
         @stdout.puts text
       else
         @stdout.puts output
       end
     end
 
-    def apply_text_color(text, enabled:)
-      return text unless enabled
-
+    def apply_text_color(text, colorizer:)
       text.lines.map do |line|
         line = line.chomp
         case line
         when "CSV Stats Summary"
-          colorize(line, code: "1;36", enabled: true)
+          colorizer.call(line, code: "1;36")
         when "Column completeness:"
-          colorize(line, code: "1", enabled: true)
+          colorizer.call(line, code: "1")
         when /\A(Metric|Value|Column|Non-blank|Blank)(\s+\|.*)?\z/
-          colorize(line, code: "1", enabled: true)
+          colorizer.call(line, code: "1")
         else
           line
         end
       end.join("\n")
-    end
-
-    def color_enabled?(mode)
-      return true if mode == "always"
-      return false if mode == "never"
-      return false if @env["NO_COLOR"]
-
-      @stdout.respond_to?(:tty?) && @stdout.tty?
-    end
-
-    def colorize(text, code:, enabled:)
-      return text unless enabled
-
-      "\e[#{code}m#{text}\e[0m"
     end
 
     def terminal_width
