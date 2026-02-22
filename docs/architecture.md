@@ -168,7 +168,6 @@ classDiagram
   class OutputDestination
   class HeaderReader
   class ValueStreamer
-  class ConsoleWriter
   class CsvFileWriter
 
   MenuLoop --> RunExtractionWorkflow : invokes
@@ -184,7 +183,6 @@ classDiagram
   ColumnSession o-- OutputDestination
   RunExtraction --> HeaderReader
   RunExtraction --> ValueStreamer
-  RunExtraction --> ConsoleWriter
   RunExtraction --> CsvFileWriter
 ```
 
@@ -231,6 +229,7 @@ classDiagram
   class OutputDestination
   class HeaderReader
   class RowStreamer
+  class CsvRowFileWriter
   MenuLoop --> RunRowExtractionWorkflow : invokes
   RunRowExtractionWorkflow --> Prompts : uses
   RunRowExtractionWorkflow --> Errors : reports failures
@@ -241,6 +240,7 @@ classDiagram
   RowSession o-- OutputDestination
   RunRowExtraction --> HeaderReader
   RunRowExtraction --> RowStreamer
+  RunRowExtraction --> CsvRowFileWriter
 ```
 
 ### Row Randomization
@@ -285,6 +285,7 @@ classDiagram
   class OutputDestination
   class HeaderReader
   class RowRandomizer
+  class CsvRandomizedRowFileWriter
 
   MenuLoop --> RunRowRandomizationWorkflow : invokes
   RunRowRandomizationWorkflow --> Prompts : uses
@@ -296,6 +297,7 @@ classDiagram
   RandomizationSession o-- OutputDestination
   RunRowRandomization --> HeaderReader
   RunRowRandomization --> RowRandomizer
+  RunRowRandomization --> CsvRandomizedRowFileWriter
 ```
 
 ### Cross-CSV Dedupe
@@ -346,6 +348,7 @@ classDiagram
   class HeaderReader
   class SelectorValidator
   class CrossCsvDeduper
+  class CsvCrossCsvDedupeFileWriter
 
   MenuLoop --> RunCrossCsvDedupeWorkflow : invokes
   Prompts --> RunCrossCsvDedupeWorkflow : provides input
@@ -360,6 +363,7 @@ classDiagram
   RunCrossCsvDedupe --> HeaderReader
   RunCrossCsvDedupe --> SelectorValidator
   RunCrossCsvDedupe --> CrossCsvDeduper
+  RunCrossCsvDedupe --> CsvCrossCsvDedupeFileWriter
 ```
 
 ## Project layout
