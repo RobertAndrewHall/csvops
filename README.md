@@ -45,14 +45,14 @@ Select `1` for column extraction, `2` for row-range extraction, `3` for row rand
 
 ### 3. Follow prompts
 
-Prompt flow:
+Each menu action runs through a dedicated CLI workflow (`interface/cli/workflows/*`) that handles prompts/output and delegates execution to an interface-agnostic application use case.
 
-- CSV file path
-- Separator (`comma`, `tab`, `semicolon`, `pipe`, or `custom`)
-- Optional header filter + column selection
-- Skip blanks (`Y/n`, default `Y`)
-- Preview + confirmation
-- Output destination (`console` or `file`)
+Prompt flow by action:
+
+- `Extract column`: file path, separator, optional header filter + column select, skip blanks, preview/confirm, output destination.
+- `Extract rows (range)`: file path, separator, start row, end row, output destination.
+- `Randomize rows`: file path, separator, headers present, optional seed, output destination.
+- `Dedupe using another CSV`: source/reference files, separators, header modes, key selectors, match options, output destination.
 
 ### 4. Example interaction (console output)
 

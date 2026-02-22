@@ -8,6 +8,15 @@ The codebase follows a DDD-lite layered structure:
 - `interface/cli/`: menu, prompts, workflows, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
+## Workflow boundary (standardized)
+
+For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`), the boundary is:
+
+- `interface/cli/workflows/*`: owns prompts, stdout rendering, and user-facing error presentation.
+- `application/use_cases/*`: interface-agnostic orchestration with request/result style contracts.
+- `domain/*`: invariants and domain policies.
+- `infrastructure/*`: CSV mechanics and output adapters.
+
 ## Domain model
 
 Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, and `Cross-CSV Dedupe`.
@@ -37,7 +46,7 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, an
   - `ExtractionValue`
   - Shared `OutputDestination` (`console` or `file(path)`)
 - Application service:
-  - `Application::UseCases::RunExtraction` orchestrates one extraction request.
+  - `Application::UseCases::RunExtraction` is interface-agnostic and exposes request/result operations.
 - Infrastructure adapters:
   - `Infrastructure::CSV::HeaderReader`
   - `Infrastructure::CSV::ValueStreamer`
@@ -45,6 +54,7 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, an
   - `Infrastructure::Output::CsvFileWriter`
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Workflows::RunExtractionWorkflow`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -52,6 +62,7 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, an
 classDiagram
   direction LR
   class MenuLoop
+  class RunExtractionWorkflow
   class Prompts
   class Errors
   class RunExtraction
@@ -67,9 +78,10 @@ classDiagram
   class ConsoleWriter
   class CsvFileWriter
 
-  MenuLoop --> RunExtraction : invokes
-  Prompts --> RunExtraction : provides input
-  RunExtraction --> Errors : reports failures
+  MenuLoop --> RunExtractionWorkflow : invokes
+  RunExtractionWorkflow --> Prompts : uses
+  RunExtractionWorkflow --> Errors : reports failures
+  RunExtractionWorkflow --> RunExtraction : calls
   RunExtraction --> ColumnSession : orchestrates
   ColumnSession o-- CsvSource
   ColumnSession o-- ColumnSelection
@@ -96,14 +108,13 @@ Core DDD structure:
   - `RowRange` (`start_row`, `end_row`) plus row-range validation errors
   - Shared `OutputDestination` (`console` or `file(path)`)
 - Application service:
-  - `Application::UseCases::RunRowExtraction` orchestrates row-range extraction.
+  - `Application::UseCases::RunRowExtraction` is interface-agnostic and exposes request/result operations.
 - Infrastructure adapters:
   - `Infrastructure::CSV::HeaderReader`
   - `Infrastructure::CSV::RowStreamer`
-  - `Infrastructure::Output::CsvRowConsoleWriter`
-  - `Infrastructure::Output::CsvRowFileWriter`
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Workflows::RunRowExtractionWorkflow`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -111,6 +122,7 @@ Core DDD structure:
 classDiagram
   direction LR
   class MenuLoop
+  class RunRowExtractionWorkflow
   class Prompts
   class Errors
   class RunRowExtraction
@@ -120,20 +132,16 @@ classDiagram
   class OutputDestination
   class HeaderReader
   class RowStreamer
-  class CsvRowConsoleWriter
-  class CsvRowFileWriter
-
-  MenuLoop --> RunRowExtraction : invokes
-  Prompts --> RunRowExtraction : provides input
-  RunRowExtraction --> Errors : reports failures
+  MenuLoop --> RunRowExtractionWorkflow : invokes
+  RunRowExtractionWorkflow --> Prompts : uses
+  RunRowExtractionWorkflow --> Errors : reports failures
+  RunRowExtractionWorkflow --> RunRowExtraction : calls
   RunRowExtraction --> RowSession : orchestrates
   RowSession o-- RowSource
   RowSession o-- RowRange
   RowSession o-- OutputDestination
   RunRowExtraction --> HeaderReader
   RunRowExtraction --> RowStreamer
-  RunRowExtraction --> CsvRowConsoleWriter
-  RunRowExtraction --> CsvRowFileWriter
 ```
 
 ### Row Randomization
@@ -148,12 +156,13 @@ Core DDD structure:
   - `RandomizationOptions` (optional deterministic `seed`)
   - Shared `OutputDestination` (`console` or `file(path)`)
 - Application service:
-  - `Application::UseCases::RunRowRandomization` orchestrates row randomization.
+  - `Application::UseCases::RunRowRandomization` is interface-agnostic and exposes request/result operations.
 - Infrastructure adapters:
   - `Infrastructure::CSV::HeaderReader`
   - `Infrastructure::CSV::RowRandomizer` (external chunked `RAND + sort` + merge)
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Workflows::RunRowRandomizationWorkflow`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -161,6 +170,7 @@ Core DDD structure:
 classDiagram
   direction LR
   class MenuLoop
+  class RunRowRandomizationWorkflow
   class Prompts
   class Errors
   class RunRowRandomization
@@ -171,9 +181,10 @@ classDiagram
   class HeaderReader
   class RowRandomizer
 
-  MenuLoop --> RunRowRandomization : invokes
-  Prompts --> RunRowRandomization : provides input
-  RunRowRandomization --> Errors : reports failures
+  MenuLoop --> RunRowRandomizationWorkflow : invokes
+  RunRowRandomizationWorkflow --> Prompts : uses
+  RunRowRandomizationWorkflow --> Errors : reports failures
+  RunRowRandomizationWorkflow --> RunRowRandomization : calls
   RunRowRandomization --> RandomizationSession : orchestrates
   RandomizationSession o-- RandomizationSource
   RandomizationSession o-- RandomizationOptions
