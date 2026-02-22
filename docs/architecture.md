@@ -21,6 +21,11 @@ For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomi
 - `domain/*`: invariants and domain policies.
 - `infrastructure/*`: CSV mechanics and output adapters.
 
+Write-boundary rule:
+- Use cases coordinate write paths but do not perform direct file writes.
+- Direct write APIs (`CSV.open`, writable `File.open`, `File.write`, `IO.write`) are infrastructure-only.
+- File output behavior is implemented in `infrastructure/output/*` writer adapters.
+
 Current usage:
 
 - `RunExtractionWorkflow` uses `WorkflowStepPipeline` + `Steps::Extraction::*`.
@@ -200,6 +205,7 @@ Core DDD structure:
 - Infrastructure adapters:
   - `Infrastructure::CSV::HeaderReader`
   - `Infrastructure::CSV::RowStreamer`
+  - `Infrastructure::Output::CsvRowFileWriter`
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunRowExtractionWorkflow`
@@ -253,6 +259,7 @@ Core DDD structure:
 - Infrastructure adapters:
   - `Infrastructure::CSV::HeaderReader`
   - `Infrastructure::CSV::RowRandomizer` (external chunked `RAND + sort` + merge)
+  - `Infrastructure::Output::CsvRandomizedRowFileWriter`
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunRowRandomizationWorkflow`
@@ -310,6 +317,7 @@ Core DDD structure:
   - `Infrastructure::CSV::HeaderReader`
   - `Infrastructure::CSV::SelectorValidator`
   - `Infrastructure::CSV::CrossCsvDeduper` (streams source rows while checking membership against reference key set)
+  - `Infrastructure::Output::CsvCrossCsvDedupeFileWriter`
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow`
