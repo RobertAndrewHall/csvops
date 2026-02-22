@@ -11,6 +11,10 @@ require "csvtool/interface/cli/workflows/builders/row_randomization_session_buil
 require "csvtool/interface/cli/workflows/presenters/row_randomization_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
+require "csvtool/interface/cli/workflows/steps/workflow_step_pipeline"
+require "csvtool/interface/cli/workflows/steps/row_randomization/collect_inputs_step"
+require "csvtool/interface/cli/workflows/steps/row_randomization/collect_destination_step"
+require "csvtool/interface/cli/workflows/steps/row_randomization/execute_step"
 module Csvtool
   module Interface
     module CLI
@@ -27,47 +31,31 @@ module Csvtool
           end
 
           def call
-            file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-            col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-            return if col_sep.nil?
+            context = {
+              use_case: @use_case,
+              session_builder: @session_builder,
+              output_destination_mapper: @output_destination_mapper,
+              presenter_factory: ->(headers:, col_sep:) { Presenters::RowRandomizationPresenter.new(stdout: @stdout, headers: headers, col_sep: col_sep) },
+              handle_error: method(:handle_error)
+            }
 
-            headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout).call
-            header_result = @use_case.read_headers(file_path: file_path, col_sep: col_sep, headers_present: headers_present)
-            return handle_error(header_result) unless header_result.ok?
-            headers = header_result.data[:headers]
-
-            seed = Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-            return if seed == Interface::CLI::Prompts::SeedPrompt::INVALID
-
-            output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-              stdin: @stdin,
-              stdout: @stdout,
-              errors: @errors
-            ).call
-            return if output_destination.nil?
-
-            session = @session_builder.call(
-              file_path: file_path,
-              col_sep: col_sep,
-              headers_present: headers_present,
-              seed: seed,
-              destination: @output_destination_mapper.call(output_destination)
-            )
-
-            presenter = Presenters::RowRandomizationPresenter.new(
-              stdout: @stdout,
-              headers: headers,
-              col_sep: session.source.separator
-            )
-            presenter.print_console_start unless session.output_destination.file?
-            randomize_result = @use_case.randomize(
-              session: session,
-              headers: headers,
-              on_row: ->(fields) { presenter.print_row(fields) }
-            )
-            return handle_error(randomize_result) unless randomize_result.ok?
-
-            presenter.print_file_written(randomize_result.data[:output_path]) if session.output_destination.file?
+            pipeline = Steps::WorkflowStepPipeline.new(steps: [
+              Steps::RowRandomization::CollectInputsStep.new(
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
+                seed_prompt: Interface::CLI::Prompts::SeedPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+              ),
+              Steps::RowRandomization::CollectDestinationStep.new(
+                output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
+                  stdin: @stdin,
+                  stdout: @stdout,
+                  errors: @errors
+                )
+              ),
+              Steps::RowRandomization::ExecuteStep.new
+            ])
+            pipeline.call(context)
           rescue ArgumentError => e
             return @errors.empty_output_path if e.message == "file output path cannot be empty"
 

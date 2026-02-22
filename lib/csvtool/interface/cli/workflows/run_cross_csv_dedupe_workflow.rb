@@ -12,6 +12,10 @@ require "csvtool/interface/cli/workflows/builders/cross_csv_dedupe_session_build
 require "csvtool/interface/cli/workflows/presenters/cross_csv_dedupe_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
+require "csvtool/interface/cli/workflows/steps/workflow_step_pipeline"
+require "csvtool/interface/cli/workflows/steps/cross_csv_dedupe/collect_profiles_step"
+require "csvtool/interface/cli/workflows/steps/cross_csv_dedupe/collect_options_step"
+require "csvtool/interface/cli/workflows/steps/cross_csv_dedupe/execute_step"
 require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
 require "csvtool/domain/cross_csv_dedupe_session/column_selector"
 module Csvtool
@@ -30,72 +34,34 @@ module Csvtool
           end
 
           def call
-            source_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-            return @errors.file_not_found(source_path) unless File.file?(source_path)
+            context = {
+              use_case: @use_case,
+              session_builder: @session_builder,
+              output_destination_mapper: @output_destination_mapper,
+              presenter_factory: ->(col_sep:) { Presenters::CrossCsvDedupePresenter.new(stdout: @stdout, col_sep: col_sep) },
+              handle_error: method(:handle_error)
+            }
 
-            source_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
-              .call(label: "Source CSV separator:")
-            return if source_col_sep.nil?
-            source_headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
-              .call(label: "Source headers present? [Y/n]: ")
-            source = Domain::CrossCsvDedupeSession::CsvProfile.new(
-              path: source_path,
-              separator: source_col_sep,
-              headers_present: source_headers_present
-            )
-
-            reference_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout)
-              .call(label: "Reference CSV file path: ")
-            return @errors.file_not_found(reference_path) unless File.file?(reference_path)
-
-            reference_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
-              .call(label: "Reference CSV separator:")
-            return if reference_col_sep.nil?
-            reference_headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
-              .call(label: "Reference headers present? [Y/n]: ")
-            reference = Domain::CrossCsvDedupeSession::CsvProfile.new(
-              path: reference_path,
-              separator: reference_col_sep,
-              headers_present: reference_headers_present
-            )
-
-            selector_prompt = Interface::CLI::Prompts::DedupeKeySelectorPrompt.new(stdin: @stdin, stdout: @stdout)
-            source_selector = selector_prompt.call(label: "Source", headers_present: source.headers_present?)
-            return @errors.column_not_found if source_selector.nil?
-            reference_selector = selector_prompt.call(label: "Reference", headers_present: reference.headers_present?)
-            return @errors.column_not_found if reference_selector.nil?
-
-            yes_no_prompt = Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout)
-            trim_whitespace = yes_no_prompt.call(label: "Trim whitespace before matching? [Y/n]: ", default: true)
-            case_insensitive = yes_no_prompt.call(label: "Case-insensitive matching? [y/N]: ", default: false)
-
-            output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-              stdin: @stdin,
-              stdout: @stdout,
-              errors: @errors
-            ).call
-            return if output_destination.nil?
-
-            session = @session_builder.call(
-              source: source,
-              reference: reference,
-              source_selector: source_selector,
-              reference_selector: reference_selector,
-              trim_whitespace: trim_whitespace,
-              case_insensitive: case_insensitive,
-              destination: @output_destination_mapper.call(output_destination)
-            )
-            presenter = Presenters::CrossCsvDedupePresenter.new(stdout: @stdout, col_sep: session.source.separator)
-
-            result = @use_case.call(
-              session: session,
-              on_header: ->(headers) { presenter.print_header(headers) },
-              on_row: ->(fields) { presenter.print_row(fields) }
-            )
-            return handle_error(result) unless result.ok?
-
-            presenter.print_file_written(result.data[:output_path]) if session.output_destination.file?
-            presenter.print_summary(result.data[:stats])
+            pipeline = Steps::WorkflowStepPipeline.new(steps: [
+              Steps::CrossCsvDedupe::CollectProfilesStep.new(
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
+                errors: @errors
+              ),
+              Steps::CrossCsvDedupe::CollectOptionsStep.new(
+                selector_prompt: Interface::CLI::Prompts::DedupeKeySelectorPrompt.new(stdin: @stdin, stdout: @stdout),
+                yes_no_prompt: Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout),
+                output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
+                  stdin: @stdin,
+                  stdout: @stdout,
+                  errors: @errors
+                ),
+                errors: @errors
+              ),
+              Steps::CrossCsvDedupe::ExecuteStep.new
+            ])
+            pipeline.call(context)
           rescue ArgumentError => e
             return @errors.empty_output_path if e.message == "file output path cannot be empty"
 

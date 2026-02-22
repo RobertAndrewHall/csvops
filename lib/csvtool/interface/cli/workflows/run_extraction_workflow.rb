@@ -12,13 +12,11 @@ require "csvtool/interface/cli/workflows/builders/column_session_builder"
 require "csvtool/interface/cli/workflows/presenters/column_extraction_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
-require "csvtool/domain/column_session/separator"
-require "csvtool/domain/column_session/csv_source"
-require "csvtool/domain/column_session/column_selection"
-require "csvtool/domain/column_session/extraction_options"
-require "csvtool/domain/column_session/extraction_value"
-require "csvtool/domain/column_session/preview"
-require "csvtool/domain/column_session/column_session"
+require "csvtool/interface/cli/workflows/steps/workflow_step_pipeline"
+require "csvtool/interface/cli/workflows/steps/extraction/collect_inputs_step"
+require "csvtool/interface/cli/workflows/steps/extraction/build_preview_step"
+require "csvtool/interface/cli/workflows/steps/extraction/collect_destination_step"
+require "csvtool/interface/cli/workflows/steps/extraction/execute_step"
 
 module Csvtool
   module Interface
@@ -37,42 +35,34 @@ module Csvtool
           end
 
           def call
-            file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-            col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-            return if col_sep.nil?
+            context = {
+              use_case: @use_case,
+              session_builder: @session_builder,
+              output_destination_mapper: @output_destination_mapper,
+              presenter: @presenter,
+              handle_error: method(:handle_error)
+            }
 
-            header_result = @use_case.read_headers(file_path: file_path, col_sep: col_sep)
-            return handle_error(header_result) unless header_result.ok?
-            headers = header_result.data[:headers]
-
-            column_name = Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(headers)
-            return if column_name.nil?
-            skip_blanks = Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout).call
-
-            session = @session_builder.call(file_path: file_path, col_sep: col_sep, column_name: column_name, skip_blanks: skip_blanks)
-            preview_result = @use_case.preview(session: session)
-            return handle_error(preview_result) unless preview_result.ok?
-            preview = Domain::ColumnSession::Preview.new(
-              values: preview_result.data[:preview_values].map { |value| Domain::ColumnSession::ExtractionValue.new(value) }
-            )
-            session = session.with_preview(preview)
-
-            confirmed = Interface::CLI::Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call(session.preview.to_strings)
-            return unless confirmed
-            session = session.confirm!
-
-            output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-              stdin: @stdin,
-              stdout: @stdout,
-              errors: @errors
-            ).call
-            return if output_destination.nil?
-            session = session.with_output_destination(@output_destination_mapper.call(output_destination))
-
-            extract_result = @use_case.extract(session: session, on_value: ->(value) { @presenter.print_value(value) })
-            return handle_error(extract_result) unless extract_result.ok?
-
-            @presenter.print_file_written(extract_result.data[:output_path]) if session.output_destination.file?
+            pipeline = Steps::WorkflowStepPipeline.new(steps: [
+              Steps::Extraction::CollectInputsStep.new(
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
+                column_selector_prompt: Interface::CLI::Prompts::ColumnSelectorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
+                skip_blanks_prompt: Interface::CLI::Prompts::SkipBlanksPrompt.new(stdin: @stdin, stdout: @stdout)
+              ),
+              Steps::Extraction::BuildPreviewStep.new(
+                confirm_prompt: Interface::CLI::Prompts::ConfirmPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+              ),
+              Steps::Extraction::CollectDestinationStep.new(
+                output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
+                  stdin: @stdin,
+                  stdout: @stdout,
+                  errors: @errors
+                )
+              ),
+              Steps::Extraction::ExecuteStep.new
+            ])
+            pipeline.call(context)
           rescue ArgumentError => e
             return @errors.empty_output_path if e.message == "file output path cannot be empty"
 
