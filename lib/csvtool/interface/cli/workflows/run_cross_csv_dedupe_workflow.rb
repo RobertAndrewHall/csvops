@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "csv"
 require "csvtool/application/use_cases/run_cross_csv_dedupe"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
@@ -10,6 +9,7 @@ require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/yes_no_prompt"
 require "csvtool/interface/cli/prompts/dedupe_key_selector_prompt"
 require "csvtool/interface/cli/workflows/builders/cross_csv_dedupe_session_builder"
+require "csvtool/interface/cli/workflows/presenters/cross_csv_dedupe_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
@@ -85,19 +85,17 @@ module Csvtool
               case_insensitive: case_insensitive,
               destination: @output_destination_mapper.call(output_destination)
             )
+            presenter = Presenters::CrossCsvDedupePresenter.new(stdout: @stdout, col_sep: session.source.separator)
 
             result = @use_case.call(
               session: session,
-              on_header: ->(headers) { print_header(headers, col_sep: session.source.separator) },
-              on_row: ->(fields) { print_row(fields, col_sep: session.source.separator) }
+              on_header: ->(headers) { presenter.print_header(headers) },
+              on_row: ->(fields) { presenter.print_row(fields) }
             )
             return handle_error(result) unless result.ok?
 
-            @stdout.puts "Wrote output to #{result.data[:output_path]}" if session.output_destination.file?
-            stats = result.data[:stats]
-            @stdout.puts "Summary: source_rows=#{stats[:source_rows]} removed_rows=#{stats[:removed_rows]} kept_rows=#{stats[:kept_rows_count]}"
-            @stdout.puts "No rows removed; no matching keys found." if stats[:removed_rows].zero?
-            @stdout.puts "All source rows were removed by dedupe." if stats[:source_rows].positive? && stats[:kept_rows_count].zero?
+            presenter.print_file_written(result.data[:output_path]) if session.output_destination.file?
+            presenter.print_summary(result.data[:stats])
           rescue ArgumentError => e
             return @errors.empty_output_path if e.message == "file output path cannot be empty"
 
@@ -105,15 +103,6 @@ module Csvtool
           end
 
           private
-
-          def print_header(headers, col_sep:)
-            @stdout.puts
-            @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: col_sep).chomp
-          end
-
-          def print_row(fields, col_sep:)
-            @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: col_sep).chomp
-          end
 
           def handle_error(result)
             @result_error_handler.call(result, {

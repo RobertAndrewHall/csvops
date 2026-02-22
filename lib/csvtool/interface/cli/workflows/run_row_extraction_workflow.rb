@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require "csv"
 require "csvtool/application/use_cases/run_row_extraction"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/interface/cli/workflows/builders/row_extraction_session_builder"
+require "csvtool/interface/cli/workflows/presenters/row_extraction_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 require "csvtool/domain/row_session/row_range"
@@ -57,21 +57,19 @@ module Csvtool
               destination: @output_destination_mapper.call(output_destination)
             )
 
-            wrote_header = false
+            presenter = Presenters::RowExtractionPresenter.new(
+              stdout: @stdout,
+              headers: headers,
+              col_sep: ","
+            )
             extract_result = @use_case.extract(
               session: session,
               headers: headers,
-              on_row: lambda do |fields|
-                unless wrote_header
-                  @stdout.puts ::CSV.generate_line(headers, row_sep: "").chomp
-                  wrote_header = true
-                end
-                @stdout.puts ::CSV.generate_line(fields, row_sep: "").chomp
-              end
+              on_row: ->(fields) { presenter.print_row(fields) }
             )
             return handle_error(extract_result) unless extract_result.ok?
 
-            @stdout.puts "Wrote output to #{extract_result.data[:output_path]}" if extract_result.data[:wrote_rows]
+            presenter.print_file_written(extract_result.data[:output_path]) if extract_result.data[:wrote_rows]
             return if extract_result.data[:matched]
 
             @errors.row_range_out_of_bounds(extract_result.data[:row_count])

@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "csv"
 require "csvtool/application/use_cases/run_row_randomization"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
@@ -9,6 +8,7 @@ require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/seed_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/interface/cli/workflows/builders/row_randomization_session_builder"
+require "csvtool/interface/cli/workflows/presenters/row_randomization_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
 module Csvtool
@@ -54,20 +54,20 @@ module Csvtool
               destination: @output_destination_mapper.call(output_destination)
             )
 
-            unless session.output_destination.file?
-              @stdout.puts
-              if headers
-                @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: session.source.separator).chomp
-              end
-            end
+            presenter = Presenters::RowRandomizationPresenter.new(
+              stdout: @stdout,
+              headers: headers,
+              col_sep: session.source.separator
+            )
+            presenter.print_console_start unless session.output_destination.file?
             randomize_result = @use_case.randomize(
               session: session,
               headers: headers,
-              on_row: ->(fields) { @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: session.source.separator).chomp }
+              on_row: ->(fields) { presenter.print_row(fields) }
             )
             return handle_error(randomize_result) unless randomize_result.ok?
 
-            @stdout.puts "Wrote output to #{randomize_result.data[:output_path]}" if session.output_destination.file?
+            presenter.print_file_written(randomize_result.data[:output_path]) if session.output_destination.file?
           rescue ArgumentError => e
             return @errors.empty_output_path if e.message == "file output path cannot be empty"
 
