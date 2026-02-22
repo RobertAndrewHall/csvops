@@ -3,6 +3,7 @@
 require "csv"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/cross_csv_deduper"
 
@@ -49,14 +50,40 @@ module Csvtool
             col_sep: ","
           )
 
-          @stdout.puts
-          @stdout.puts ::CSV.generate_line(result[:headers], row_sep: "").chomp
-          result[:kept_rows].each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "").chomp }
+          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
+            stdin: @stdin,
+            stdout: @stdout,
+            errors: @errors
+          ).call
+          return if output_destination.nil?
+
+          if output_destination[:mode] == :file
+            write_output_file(output_destination[:path], result[:headers], result[:kept_rows])
+          else
+            print_to_console(result[:headers], result[:kept_rows])
+          end
           @stdout.puts "Summary: source_rows=#{result[:source_rows]} removed_rows=#{result[:removed_rows]} kept_rows=#{result[:kept_rows_count]}"
         rescue CSV::MalformedCSVError
           @errors.could_not_parse_csv
         rescue Errno::EACCES
           @errors.cannot_read_file(source_path)
+        end
+
+        private
+
+        def print_to_console(headers, rows)
+          @stdout.puts
+          @stdout.puts ::CSV.generate_line(headers, row_sep: "").chomp
+          rows.each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "").chomp }
+        end
+
+        def write_output_file(path, headers, rows)
+          ::CSV.open(path, "w", write_headers: true, headers: headers) do |csv|
+            rows.each { |fields| csv << fields }
+          end
+          @stdout.puts "Wrote output to #{path}"
+        rescue Errno::EACCES, Errno::ENOENT => e
+          @errors.cannot_write_output_file(path, e.class)
         end
       end
     end

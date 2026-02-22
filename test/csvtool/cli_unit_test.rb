@@ -52,7 +52,7 @@ class CliUnitTest < Minitest::Test
     stdout = StringIO.new
     source_fixture = File.expand_path("../fixtures/dedupe_source.csv", __dir__)
     reference_fixture = File.expand_path("../fixtures/dedupe_reference.csv", __dir__)
-    input = ["4", source_fixture, reference_fixture, "customer_id", "external_id", "5"].join("\n") + "\n"
+    input = ["4", source_fixture, reference_fixture, "customer_id", "external_id", "", "5"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "customer_id,name"
