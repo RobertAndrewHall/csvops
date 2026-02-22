@@ -1,6 +1,8 @@
 # CSV Ops CLI
 
-`csvops` is a small Ruby CLI for interactive CSV workflows.
+`csvops` is a Ruby CLI for working with CSV data through guided workflows and direct commands, so you can extract columns and rows, randomize rows, split files, compare parity, de-duplicate across files, and generate high-level stats.
+
+It is designed for practical use with interactive prompts, file-based outputs, and an architecture that keeps workflows composable and testable.
 
 ## Requirements
 
