@@ -23,8 +23,10 @@ For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomi
 
 Current usage:
 
-- `RunRowExtractionWorkflow` uses a lightweight step pipeline (`WorkflowStepPipeline` + `Steps::RowExtraction::*`).
-- Other workflows currently use direct orchestration and can adopt the pipeline when complexity increases.
+- `RunExtractionWorkflow` uses `WorkflowStepPipeline` + `Steps::Extraction::*`.
+- `RunRowExtractionWorkflow` uses `WorkflowStepPipeline` + `Steps::RowExtraction::*`.
+- `RunRowRandomizationWorkflow` uses `WorkflowStepPipeline` + `Steps::RowRandomization::*`.
+- `RunCrossCsvDedupeWorkflow` uses `WorkflowStepPipeline` + `Steps::CrossCsvDedupe::*`.
 
 ## Adding New Concepts
 
@@ -137,6 +139,9 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, an
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunExtractionWorkflow`
   - `Interface::CLI::Workflows::Builders::ColumnSessionBuilder`
+  - `Interface::CLI::Workflows::Steps::WorkflowStepPipeline`
+  - `Interface::CLI::Workflows::Steps::Extraction::*`
+  - `Interface::CLI::Workflows::Presenters::ColumnExtractionPresenter`
   - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
@@ -252,6 +257,8 @@ Core DDD structure:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunRowRandomizationWorkflow`
   - `Interface::CLI::Workflows::Builders::RowRandomizationSessionBuilder`
+  - `Interface::CLI::Workflows::Steps::WorkflowStepPipeline`
+  - `Interface::CLI::Workflows::Steps::RowRandomization::*`
   - `Interface::CLI::Workflows::Presenters::RowRandomizationPresenter`
   - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
   - `Interface::CLI::Prompts::*`
@@ -307,6 +314,8 @@ Core DDD structure:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow`
   - `Interface::CLI::Workflows::Builders::CrossCsvDedupeSessionBuilder`
+  - `Interface::CLI::Workflows::Steps::WorkflowStepPipeline`
+  - `Interface::CLI::Workflows::Steps::CrossCsvDedupe::*`
   - `Interface::CLI::Workflows::Presenters::CrossCsvDedupePresenter`
   - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
   - `Interface::CLI::Prompts::*`
