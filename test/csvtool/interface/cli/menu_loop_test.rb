@@ -21,15 +21,17 @@ class MenuLoopTest < Minitest::Test
     rows_action = FakeAction.new
     randomize_rows_action = FakeAction.new
     dedupe_action = FakeAction.new
+    parity_action = FakeAction.new
     stdout = StringIO.new
     menu = Csvtool::Interface::CLI::MenuLoop.new(
-      stdin: StringIO.new("1\n5\n"),
+      stdin: StringIO.new("1\n6\n"),
       stdout: stdout,
-      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Exit"],
+      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Validate parity", "Exit"],
       extract_column_action: column_action,
       extract_rows_action: rows_action,
       randomize_rows_action: randomize_rows_action,
-      dedupe_action: dedupe_action
+      dedupe_action: dedupe_action,
+      parity_action: parity_action
     )
 
     status = menu.run
@@ -39,6 +41,7 @@ class MenuLoopTest < Minitest::Test
     assert_equal 0, rows_action.runs
     assert_equal 0, randomize_rows_action.runs
     assert_equal 0, dedupe_action.runs
+    assert_equal 0, parity_action.runs
     assert_includes stdout.string, "CSV Tool Menu"
   end
 
@@ -47,15 +50,17 @@ class MenuLoopTest < Minitest::Test
     rows_action = FakeAction.new
     randomize_rows_action = FakeAction.new
     dedupe_action = FakeAction.new
+    parity_action = FakeAction.new
     stdout = StringIO.new
     menu = Csvtool::Interface::CLI::MenuLoop.new(
-      stdin: StringIO.new("2\n5\n"),
+      stdin: StringIO.new("2\n6\n"),
       stdout: stdout,
-      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Exit"],
+      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Validate parity", "Exit"],
       extract_column_action: column_action,
       extract_rows_action: rows_action,
       randomize_rows_action: randomize_rows_action,
-      dedupe_action: dedupe_action
+      dedupe_action: dedupe_action,
+      parity_action: parity_action
     )
 
     status = menu.run
@@ -65,6 +70,7 @@ class MenuLoopTest < Minitest::Test
     assert_equal 1, rows_action.runs
     assert_equal 0, randomize_rows_action.runs
     assert_equal 0, dedupe_action.runs
+    assert_equal 0, parity_action.runs
   end
 
   def test_routes_randomize_rows_then_exit
@@ -72,15 +78,17 @@ class MenuLoopTest < Minitest::Test
     rows_action = FakeAction.new
     randomize_rows_action = FakeAction.new
     dedupe_action = FakeAction.new
+    parity_action = FakeAction.new
     stdout = StringIO.new
     menu = Csvtool::Interface::CLI::MenuLoop.new(
-      stdin: StringIO.new("3\n5\n"),
+      stdin: StringIO.new("3\n6\n"),
       stdout: stdout,
-      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Exit"],
+      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Validate parity", "Exit"],
       extract_column_action: column_action,
       extract_rows_action: rows_action,
       randomize_rows_action: randomize_rows_action,
-      dedupe_action: dedupe_action
+      dedupe_action: dedupe_action,
+      parity_action: parity_action
     )
 
     status = menu.run
@@ -90,6 +98,7 @@ class MenuLoopTest < Minitest::Test
     assert_equal 0, rows_action.runs
     assert_equal 1, randomize_rows_action.runs
     assert_equal 0, dedupe_action.runs
+    assert_equal 0, parity_action.runs
   end
 
   def test_routes_dedupe_then_exit
@@ -97,15 +106,17 @@ class MenuLoopTest < Minitest::Test
     rows_action = FakeAction.new
     randomize_rows_action = FakeAction.new
     dedupe_action = FakeAction.new
+    parity_action = FakeAction.new
     stdout = StringIO.new
     menu = Csvtool::Interface::CLI::MenuLoop.new(
-      stdin: StringIO.new("4\n5\n"),
+      stdin: StringIO.new("4\n6\n"),
       stdout: stdout,
-      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Exit"],
+      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Validate parity", "Exit"],
       extract_column_action: column_action,
       extract_rows_action: rows_action,
       randomize_rows_action: randomize_rows_action,
-      dedupe_action: dedupe_action
+      dedupe_action: dedupe_action,
+      parity_action: parity_action
     )
 
     status = menu.run
@@ -115,6 +126,35 @@ class MenuLoopTest < Minitest::Test
     assert_equal 0, rows_action.runs
     assert_equal 0, randomize_rows_action.runs
     assert_equal 1, dedupe_action.runs
+    assert_equal 0, parity_action.runs
+  end
+
+  def test_routes_parity_then_exit
+    column_action = FakeAction.new
+    rows_action = FakeAction.new
+    randomize_rows_action = FakeAction.new
+    dedupe_action = FakeAction.new
+    parity_action = FakeAction.new
+    stdout = StringIO.new
+    menu = Csvtool::Interface::CLI::MenuLoop.new(
+      stdin: StringIO.new("5\n6\n"),
+      stdout: stdout,
+      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Validate parity", "Exit"],
+      extract_column_action: column_action,
+      extract_rows_action: rows_action,
+      randomize_rows_action: randomize_rows_action,
+      dedupe_action: dedupe_action,
+      parity_action: parity_action
+    )
+
+    status = menu.run
+
+    assert_equal 0, status
+    assert_equal 0, column_action.runs
+    assert_equal 0, rows_action.runs
+    assert_equal 0, randomize_rows_action.runs
+    assert_equal 0, dedupe_action.runs
+    assert_equal 1, parity_action.runs
   end
 
   def test_invalid_choice_shows_prompt
@@ -122,23 +162,26 @@ class MenuLoopTest < Minitest::Test
     rows_action = FakeAction.new
     randomize_rows_action = FakeAction.new
     dedupe_action = FakeAction.new
+    parity_action = FakeAction.new
     stdout = StringIO.new
     menu = Csvtool::Interface::CLI::MenuLoop.new(
-      stdin: StringIO.new("x\n5\n"),
+      stdin: StringIO.new("x\n6\n"),
       stdout: stdout,
-      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Exit"],
+      menu_options: ["Extract column", "Extract rows (range)", "Randomize rows", "Dedupe using another CSV", "Validate parity", "Exit"],
       extract_column_action: column_action,
       extract_rows_action: rows_action,
       randomize_rows_action: randomize_rows_action,
-      dedupe_action: dedupe_action
+      dedupe_action: dedupe_action,
+      parity_action: parity_action
     )
 
     menu.run
 
-    assert_includes stdout.string, "Please choose 1, 2, 3, 4, or 5."
+    assert_includes stdout.string, "Please choose 1, 2, 3, 4, 5, or 6."
     assert_equal 0, column_action.runs
     assert_equal 0, rows_action.runs
     assert_equal 0, randomize_rows_action.runs
     assert_equal 0, dedupe_action.runs
+    assert_equal 0, parity_action.runs
   end
 end

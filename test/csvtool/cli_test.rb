@@ -11,7 +11,7 @@ class TestCli < Minitest::Test
 
   def test_menu_can_exit_cleanly
     output = StringIO.new
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("5\n"), stdout: output, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("6\n"), stdout: output, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes output.string, "CSV Tool Menu"
   end
@@ -26,7 +26,7 @@ class TestCli < Minitest::Test
       "",
       "y",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -58,7 +58,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -79,7 +79,7 @@ class TestCli < Minitest::Test
       "0",
       "3",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -98,7 +98,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -119,7 +119,7 @@ class TestCli < Minitest::Test
       "2",
       "3",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -144,7 +144,7 @@ class TestCli < Minitest::Test
         "3",
         "2",
         output_path,
-        "5"
+        "6"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -164,7 +164,7 @@ class TestCli < Minitest::Test
       "1",
       "2",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -184,7 +184,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -209,7 +209,7 @@ class TestCli < Minitest::Test
         "",
         "2",
         output_path,
-        "5"
+        "6"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -231,7 +231,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -250,7 +250,7 @@ class TestCli < Minitest::Test
       "n",
       "",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -270,7 +270,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "abc",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -295,7 +295,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -329,7 +329,7 @@ class TestCli < Minitest::Test
       "",
       "2",
       output_path,
-      "5"
+      "6"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -356,7 +356,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -382,7 +382,7 @@ class TestCli < Minitest::Test
       "",
       "",
       "",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -392,6 +392,24 @@ class TestCli < Minitest::Test
     assert_includes output.string, "1,Alice"
     assert_includes output.string, "3,Cara"
     assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+  end
+
+  def test_parity_workflow_shell_prompts_and_returns_to_menu
+    output = StringIO.new
+    input = [
+      "5",
+      fixture_path("sample_people.csv"),
+      fixture_path("sample_people.csv"),
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "Left CSV file path:"
+    assert_includes output.string, "Right CSV file path:"
+    assert_includes output.string, "Parity validation workflow shell complete."
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 
   def test_end_to_end_file_output_writes_expected_csv
@@ -410,7 +428,7 @@ class TestCli < Minitest::Test
         "y",
         "2",
         output_path,
-        "5"
+        "6"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -430,7 +448,7 @@ class TestCli < Minitest::Test
       "1",
       "",
       "n",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     output = StringIO.new
@@ -445,7 +463,7 @@ class TestCli < Minitest::Test
     output = StringIO.new
     status = Csvtool::CLI.start(
       ["menu"],
-      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n4\n"),
+      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n4\n6\n"),
       stdout: output,
       stderr: StringIO.new
     )
@@ -466,7 +484,7 @@ class TestCli < Minitest::Test
       "y",
       "2",
       "/tmp/not-a-dir/out.csv",
-      "5"
+      "6"
     ].join("\n") + "\n"
 
     output = StringIO.new
