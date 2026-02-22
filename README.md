@@ -37,11 +37,12 @@ CSV Tool Menu
 2. Extract rows (range)
 3. Randomize rows
 4. Dedupe using another CSV
-5. Exit
+5. Validate parity
+6. Exit
 >
 ```
 
-Select `1` for column extraction, `2` for row-range extraction, `3` for row randomization, or `4` for cross-CSV dedupe.
+Select `1` for column extraction, `2` for row-range extraction, `3` for row randomization, `4` for cross-CSV dedupe, or `5` for parity validation.
 
 ### 3. Follow prompts
 
@@ -59,6 +60,7 @@ Prompt flow by action:
 - `Extract rows (range)`: file path, separator, start row, end row, output destination.
 - `Randomize rows`: file path, separator, headers present, optional seed, output destination.
 - `Dedupe using another CSV`: source/reference files, separators, header modes, key selectors, match options, output destination.
+- `Validate parity`: left/right files, separator, header mode, parity summary, mismatch samples.
 
 ### 4. Example interaction (console output)
 
@@ -129,7 +131,8 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
  2. Extract rows (range)
  3. Randomize rows
  4. Dedupe using another CSV
- 5. Exit
+ 5. Validate parity
+ 6. Exit
 +> 4
  CSV file path: /tmp/source.csv
  Source CSV separator:
@@ -165,6 +168,45 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
 -3,Cara
 -Summary: source_rows=5 removed_rows=3 kept_rows=2
 ```
+
+### 8. Parity interaction example
+
+Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
+
+```diff
+ CSV Tool Menu
+ 1. Extract column
+ 2. Extract rows (range)
+ 3. Randomize rows
+ 4. Dedupe using another CSV
+ 5. Validate parity
+ 6. Exit
++> 5
+ Left CSV file path: /tmp/left.csv
+ Right CSV file path: /tmp/right.csv
+ Choose separator:
+ 1. comma (,)
+ 2. tab (\t)
+ 3. semicolon (;)
+ 4. pipe (|)
+ 5. custom
++Separator choice [1]: 1
+ Headers present? [Y/n]:
+-MISMATCH
+-Summary: left_rows=10 right_rows=10 left_only=2 right_only=2
+-Left-only examples:
+- 4,Dina (count +1)
+-Right-only examples:
+- 4,Dina-Updated (count +1)
+```
+
+### 9. Parity large-file behavior
+
+- Parity uses a streaming count-delta strategy:
+  - Stream left rows and increment row-key counts.
+  - Stream right rows and decrement row-key counts.
+- Exact duplicate semantics are preserved by count deltas per normalized row value.
+- Memory scales with the number of distinct row keys in the parity map, not the total input row count.
 
 ## Testing
 

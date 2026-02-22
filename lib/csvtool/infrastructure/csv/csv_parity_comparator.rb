@@ -7,24 +7,16 @@ module Csvtool
     module CSV
       class CsvParityComparator
         def call(left_path:, right_path:, col_sep:, headers_present:, sample_limit: 5)
-          left_counts, left_rows = row_counts(path: left_path, col_sep: col_sep, headers_present: headers_present)
-          right_counts, right_rows = row_counts(path: right_path, col_sep: col_sep, headers_present: headers_present)
-
-          left_only_count = 0
-          right_only_count = 0
-          left_only_examples = []
-          right_only_examples = []
-
-          (left_counts.keys | right_counts.keys).each do |key|
-            diff = left_counts[key] - right_counts[key]
-            if diff.positive?
-              left_only_count += diff
-              left_only_examples << { row: key, count_delta: diff } if left_only_examples.length < sample_limit
-            elsif diff.negative?
-              right_only_count += -diff
-              right_only_examples << { row: key, count_delta: -diff } if right_only_examples.length < sample_limit
-            end
+          deltas = Hash.new(0)
+          left_rows = stream_rows(path: left_path, col_sep: col_sep, headers_present: headers_present) do |key|
+            deltas[key] += 1
           end
+          right_rows = stream_rows(path: right_path, col_sep: col_sep, headers_present: headers_present) do |key|
+            deltas[key] -= 1
+          end
+
+          left_only_count, right_only_count, left_only_examples, right_only_examples =
+            mismatch_totals_and_samples(deltas: deltas, sample_limit: sample_limit)
 
           {
             match: left_only_count.zero? && right_only_count.zero?,
@@ -39,17 +31,35 @@ module Csvtool
 
         private
 
-        def row_counts(path:, col_sep:, headers_present:)
-          counts = Hash.new(0)
+        def stream_rows(path:, col_sep:, headers_present:)
           rows = 0
 
           ::CSV.foreach(path, headers: headers_present, col_sep: col_sep) do |row|
             fields = headers_present ? row.fields : row
-            counts[serialize(fields: fields, col_sep: col_sep)] += 1
+            yield serialize(fields: fields, col_sep: col_sep)
             rows += 1
           end
 
-          [counts, rows]
+          rows
+        end
+
+        def mismatch_totals_and_samples(deltas:, sample_limit:)
+          left_only_count = 0
+          right_only_count = 0
+          left_only_examples = []
+          right_only_examples = []
+
+          deltas.each do |key, delta|
+            if delta.positive?
+              left_only_count += delta
+              left_only_examples << { row: key, count_delta: delta } if left_only_examples.length < sample_limit
+            elsif delta.negative?
+              right_only_count += -delta
+              right_only_examples << { row: key, count_delta: -delta } if right_only_examples.length < sample_limit
+            end
+          end
+
+          [left_only_count, right_only_count, left_only_examples, right_only_examples]
         end
 
         def serialize(fields:, col_sep:)

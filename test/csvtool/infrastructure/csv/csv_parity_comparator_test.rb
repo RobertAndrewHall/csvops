@@ -58,4 +58,21 @@ class CsvParityComparatorTest < Minitest::Test
     assert_equal "1,Alice", result[:left_only_examples][0][:row]
     assert_equal 1, result[:left_only_examples][0][:count_delta]
   end
+
+  def test_preserves_exact_semantics_for_larger_fixture_with_different_order
+    comparator = Csvtool::Infrastructure::CSV::CsvParityComparator.new
+
+    result = comparator.call(
+      left_path: fixture_path("sample_people_many.csv"),
+      right_path: fixture_path("parity_people_many_reordered.csv"),
+      col_sep: ",",
+      headers_present: true
+    )
+
+    assert_equal true, result[:match]
+    assert_equal 12, result[:left_rows]
+    assert_equal 12, result[:right_rows]
+    assert_equal 0, result[:left_only_count]
+    assert_equal 0, result[:right_only_count]
+  end
 end
