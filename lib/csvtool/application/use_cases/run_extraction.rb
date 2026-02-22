@@ -3,6 +3,7 @@
 require "csv"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
+require "csvtool/infrastructure/output/csv_file_writer"
 require "csvtool/services/preview_builder"
 
 module Csvtool
@@ -18,11 +19,13 @@ module Csvtool
         def initialize(
           header_reader: Infrastructure::CSV::HeaderReader.new,
           value_streamer: Infrastructure::CSV::ValueStreamer.new,
-          preview_builder: nil
+          preview_builder: nil,
+          csv_file_writer: nil
         )
           @header_reader = header_reader
           @value_streamer = value_streamer
           @preview_builder = preview_builder || Services::PreviewBuilder.new(value_streamer: value_streamer)
+          @csv_file_writer = csv_file_writer || Infrastructure::Output::CsvFileWriter.new(value_streamer: @value_streamer)
         end
 
         def read_headers(file_path:, col_sep:)
@@ -55,13 +58,14 @@ module Csvtool
 
         def extract(session:, on_value: nil)
           if session.output_destination.file?
-            write_file(
+            @csv_file_writer.call(
               output_path: session.output_destination.path,
               file_path: session.source.path,
               column_name: session.column_selection.name,
               col_sep: session.source.separator.value,
               skip_blanks: session.options.skip_blanks?
             )
+            success(output_path: session.output_destination.path)
           else
             @value_streamer.each(
               file_path: session.source.path,
@@ -73,26 +77,15 @@ module Csvtool
           end
         rescue CSV::MalformedCSVError
           failure(:could_not_parse_csv)
-        rescue Errno::EACCES
-          failure(:cannot_read_file, path: session.source.path)
+        rescue Errno::EACCES, Errno::ENOENT => e
+          if session.output_destination.file?
+            failure(:cannot_write_output_file, path: session.output_destination.path, error_class: e.class)
+          else
+            failure(:cannot_read_file, path: session.source.path)
+          end
         end
 
         private
-
-        def write_file(output_path:, file_path:, column_name:, col_sep:, skip_blanks:)
-          ::CSV.open(output_path, "w") do |csv|
-            csv << [column_name]
-            @value_streamer.each(
-              file_path: file_path,
-              column_name: column_name,
-              col_sep: col_sep,
-              skip_blanks: skip_blanks
-            ) { |value| csv << [value] }
-          end
-          success(output_path: output_path)
-        rescue Errno::EACCES, Errno::ENOENT => e
-          failure(:cannot_write_output_file, path: output_path, error_class: e.class)
-        end
 
         def success(data)
           Result.new(ok: true, error: nil, data: data)

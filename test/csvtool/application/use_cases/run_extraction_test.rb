@@ -11,6 +11,12 @@ require "csvtool/domain/shared/output_destination"
 require "tmpdir"
 
 class RunExtractionTest < Minitest::Test
+  class RaisingWriter
+    def call(**_kwargs)
+      raise Errno::ENOENT
+    end
+  end
+
   def fixture_path(name)
     File.expand_path("../../../fixtures/#{name}", __dir__)
   end
@@ -49,6 +55,19 @@ class RunExtractionTest < Minitest::Test
       assert_equal output_path, result.data[:output_path]
       assert_equal "name\nAlice\nBob\nCara\n", File.read(output_path)
     end
+  end
+
+  def test_extract_returns_cannot_write_output_file_when_writer_fails
+    use_case = Csvtool::Application::UseCases::RunExtraction.new(csv_file_writer: RaisingWriter.new)
+
+    result = use_case.extract(
+      session: build_session(output_destination: Csvtool::Domain::Shared::OutputDestination.file(path: "/tmp/names.csv"))
+    )
+
+    assert_equal false, result.ok?
+    assert_equal :cannot_write_output_file, result.error
+    assert_equal "/tmp/names.csv", result.data[:path]
+    assert_equal Errno::ENOENT, result.data[:error_class]
   end
 
   private

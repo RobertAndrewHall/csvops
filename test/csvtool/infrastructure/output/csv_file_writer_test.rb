@@ -2,7 +2,6 @@
 
 require_relative "../../../test_helper"
 require "csvtool/infrastructure/output/csv_file_writer"
-require "csvtool/interface/cli/errors/presenter"
 require "tmpdir"
 
 class InfrastructureCsvFileWriterTest < Minitest::Test
@@ -13,10 +12,7 @@ class InfrastructureCsvFileWriterTest < Minitest::Test
   end
 
   def test_writes_header_and_values
-    stdout = StringIO.new
     writer = Csvtool::Infrastructure::Output::CsvFileWriter.new(
-      stdout: stdout,
-      errors: Csvtool::Interface::CLI::Errors::Presenter.new(stdout: stdout),
       value_streamer: FakeStreamer.new
     )
 

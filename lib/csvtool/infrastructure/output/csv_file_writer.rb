@@ -6,9 +6,7 @@ module Csvtool
   module Infrastructure
     module Output
       class CsvFileWriter
-        def initialize(stdout:, errors:, value_streamer:)
-          @stdout = stdout
-          @errors = errors
+        def initialize(value_streamer:)
           @value_streamer = value_streamer
         end
 
@@ -19,10 +17,6 @@ module Csvtool
               csv << [value]
             end
           end
-
-          @stdout.puts "Wrote output to #{output_path}"
-        rescue Errno::EACCES, Errno::ENOENT => e
-          @errors.cannot_write_output_file(output_path, e.class)
         end
       end
     end
