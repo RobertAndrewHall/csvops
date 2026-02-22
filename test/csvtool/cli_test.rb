@@ -491,6 +491,63 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Dina,Rome (count +1)"
   end
 
+  def test_parity_workflow_missing_left_file_returns_to_menu
+    output = StringIO.new
+    input = [
+      "5",
+      "/tmp/not-there-left.csv",
+      fixture_path("sample_people.csv"),
+      "",
+      "",
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "File not found: /tmp/not-there-left.csv"
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+    refute_includes output.string, "Traceback"
+  end
+
+  def test_parity_workflow_missing_right_file_returns_to_menu
+    output = StringIO.new
+    input = [
+      "5",
+      fixture_path("sample_people.csv"),
+      "/tmp/not-there-right.csv",
+      "",
+      "",
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "File not found: /tmp/not-there-right.csv"
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+    refute_includes output.string, "Traceback"
+  end
+
+  def test_parity_workflow_malformed_csv_returns_to_menu
+    output = StringIO.new
+    input = [
+      "5",
+      fixture_path("sample_people.csv"),
+      fixture_path("sample_people_bad_tail.csv"),
+      "",
+      "",
+      "6"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "Could not parse CSV file."
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+    refute_includes output.string, "Traceback"
+  end
+
   def test_end_to_end_file_output_writes_expected_csv
     output = StringIO.new
     output_path = nil

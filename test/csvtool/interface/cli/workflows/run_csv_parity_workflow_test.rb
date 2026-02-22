@@ -37,6 +37,12 @@ class RunCsvParityWorkflowTest < Minitest::Test
     end
   end
 
+  class CannotReadUseCase
+    def call(left_path:, right_path:, col_sep:, headers_present:)
+      Struct.new(:ok?, :error, :data).new(false, :cannot_read_file, { path: "/tmp/protected.csv" })
+    end
+  end
+
   def test_prompts_for_paths_and_calls_use_case
     stdout = StringIO.new
     use_case = FakeUseCase.new
@@ -68,5 +74,17 @@ class RunCsvParityWorkflowTest < Minitest::Test
     assert_includes stdout.string, "Cara,Berlin (count +1)"
     assert_includes stdout.string, "Right-only examples:"
     assert_includes stdout.string, "Dina,Rome (count +1)"
+  end
+
+  def test_prints_cannot_read_error_without_stacktrace
+    stdout = StringIO.new
+    input = StringIO.new("/tmp/left.csv\n/tmp/right.csv\n\ny\n")
+
+    Csvtool::Interface::CLI::Workflows::RunCsvParityWorkflow
+      .new(stdin: input, stdout: stdout, use_case: CannotReadUseCase.new)
+      .call
+
+    assert_includes stdout.string, "Cannot read file: /tmp/protected.csv"
+    refute_includes stdout.string, "Traceback"
   end
 end
