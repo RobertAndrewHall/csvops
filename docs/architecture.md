@@ -21,6 +21,9 @@ For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomi
 - `domain/*`: invariants and domain policies.
 - `infrastructure/*`: CSV mechanics and output adapters.
 
+Output UI rules:
+- See [`docs/cli-output-conventions.md`](cli-output-conventions.md) for stream, format, color, and table rendering contracts used across workflows.
+
 Write-boundary rule:
 - Use cases coordinate write paths but do not perform direct file writes.
 - Direct write APIs (`CSV.open`, writable `File.open`, `File.write`, `IO.write`) are infrastructure-only.

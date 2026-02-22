@@ -57,7 +57,10 @@ Typical prompt pattern:
 - choose action-specific options
 - choose output destination (console or file)
 
-For architecture and internal design details, see [`docs/architecture.md`](docs/architecture.md).
+For architecture and internal design details, see:
+
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/cli-output-conventions.md`](docs/cli-output-conventions.md)
 
 ### 4. Example interaction (console output)
 
@@ -337,3 +340,4 @@ Release runbook:
 Full architecture and domain documentation lives in:
 
 - [`docs/architecture.md`](docs/architecture.md)
+- [`docs/cli-output-conventions.md`](docs/cli-output-conventions.md)
