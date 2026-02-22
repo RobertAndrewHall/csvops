@@ -6,6 +6,9 @@ require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
+require "csvtool/interface/cli/prompts/headers_present_prompt"
+require "csvtool/interface/cli/prompts/yes_no_prompt"
+require "csvtool/interface/cli/prompts/dedupe_key_selector_prompt"
 require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
 require "csvtool/domain/cross_csv_dedupe_session/column_selector"
 require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
@@ -32,8 +35,8 @@ module Csvtool
             @stdout.puts "Source CSV separator:"
             source_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
             return if source_col_sep.nil?
-            @stdout.print "Source headers present? [Y/n]: "
-            source_headers_present = !%w[n no].include?(@stdin.gets&.strip.to_s.downcase)
+            source_headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
+              .call(label: "Source headers present? [Y/n]: ")
             source = Domain::CrossCsvDedupeSession::CsvProfile.new(
               path: source_path,
               separator: source_col_sep,
@@ -47,23 +50,23 @@ module Csvtool
             @stdout.puts "Reference CSV separator:"
             reference_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
             return if reference_col_sep.nil?
-            @stdout.print "Reference headers present? [Y/n]: "
-            reference_headers_present = !%w[n no].include?(@stdin.gets&.strip.to_s.downcase)
+            reference_headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
+              .call(label: "Reference headers present? [Y/n]: ")
             reference = Domain::CrossCsvDedupeSession::CsvProfile.new(
               path: reference_path,
               separator: reference_col_sep,
               headers_present: reference_headers_present
             )
 
-            source_selector = prompt_selector("Source", source.headers_present?)
+            selector_prompt = Interface::CLI::Prompts::DedupeKeySelectorPrompt.new(stdin: @stdin, stdout: @stdout)
+            source_selector = selector_prompt.call(label: "Source", headers_present: source.headers_present?)
             return @errors.column_not_found if source_selector.nil?
-            reference_selector = prompt_selector("Reference", reference.headers_present?)
+            reference_selector = selector_prompt.call(label: "Reference", headers_present: reference.headers_present?)
             return @errors.column_not_found if reference_selector.nil?
 
-            @stdout.print "Trim whitespace before matching? [Y/n]: "
-            trim_whitespace = read_yes_no(default: true)
-            @stdout.print "Case-insensitive matching? [y/N]: "
-            case_insensitive = read_yes_no(default: false)
+            yes_no_prompt = Interface::CLI::Prompts::YesNoPrompt.new(stdin: @stdin, stdout: @stdout)
+            trim_whitespace = yes_no_prompt.call(label: "Trim whitespace before matching? [Y/n]: ", default: true)
+            case_insensitive = yes_no_prompt.call(label: "Case-insensitive matching? [y/N]: ", default: false)
 
             key_mapping = Domain::CrossCsvDedupeSession::KeyMapping.new(
               source_selector: source_selector,
@@ -114,18 +117,6 @@ module Csvtool
 
           private
 
-          def prompt_selector(label, headers_present)
-            if headers_present
-              @stdout.print "#{label} key column name: "
-            else
-              @stdout.print "#{label} key column index (1-based): "
-            end
-            input = @stdin.gets&.strip.to_s
-            Domain::CrossCsvDedupeSession::ColumnSelector.from_input(headers_present: headers_present, input: input)
-          rescue ArgumentError
-            nil
-          end
-
           def print_header(headers, col_sep:)
             @stdout.puts
             @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: col_sep).chomp
@@ -148,14 +139,6 @@ module Csvtool
             end
           end
 
-          def read_yes_no(default:)
-            answer = @stdin.gets&.strip.to_s.downcase
-            return default if answer.empty?
-            return true if %w[y yes].include?(answer)
-            return false if %w[n no].include?(answer)
-
-            default
-          end
         end
       end
     end

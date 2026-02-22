@@ -4,18 +4,20 @@ module Csvtool
   module Interface
     module CLI
       module Prompts
-        class HeadersPresentPrompt
-          DEFAULT_LABEL = "Headers present? [Y/n]: "
-
+        class YesNoPrompt
           def initialize(stdin:, stdout:)
             @stdin = stdin
             @stdout = stdout
           end
 
-          def call(label: DEFAULT_LABEL)
+          def call(label:, default:)
             @stdout.print label
             answer = @stdin.gets&.strip.to_s.downcase
-            !%w[n no].include?(answer)
+            return default if answer.empty?
+            return true if %w[y yes].include?(answer)
+            return false if %w[n no].include?(answer)
+
+            default
           end
         end
       end

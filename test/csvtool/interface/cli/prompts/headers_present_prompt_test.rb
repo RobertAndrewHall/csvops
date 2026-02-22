@@ -11,4 +11,14 @@ class HeadersPresentPromptTest < Minitest::Test
     assert_equal true, yes_prompt.call
     assert_equal false, no_prompt.call
   end
+
+  def test_supports_custom_label
+    out = StringIO.new
+    prompt = Csvtool::Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: StringIO.new("yes\n"), stdout: out)
+
+    result = prompt.call(label: "Source headers present? [Y/n]: ")
+
+    assert_equal true, result
+    assert_includes out.string, "Source headers present? [Y/n]: "
+  end
 end
