@@ -39,11 +39,12 @@ CSV Tool Menu
 4. Dedupe using another CSV
 5. Validate parity
 6. Split CSV into chunks
-7. Exit
+7. CSV stats summary
+8. Exit
 >
 ```
 
-Select `1` for column extraction, `2` for row-range extraction, `3` for row randomization, `4` for cross-CSV dedupe, `5` for parity validation, or `6` for CSV splitting.
+Select `1` for column extraction, `2` for row-range extraction, `3` for row randomization, `4` for cross-CSV dedupe, `5` for parity validation, `6` for CSV splitting, or `7` for CSV stats.
 
 ### 3. Follow prompts
 
@@ -63,6 +64,7 @@ Prompt flow by action:
 - `Dedupe using another CSV`: source/reference files, separators, header modes, key selectors, match options, output destination.
 - `Validate parity`: left/right files, separator, header mode, parity summary, mismatch samples.
 - `Split CSV into chunks`: source file, separator, header mode, chunk size, output directory/prefix, overwrite policy, optional manifest.
+- `CSV stats summary`: source file, separator, header mode, output destination.
 
 ### 4. Example interaction (console output)
 
@@ -134,8 +136,9 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
 3. Randomize rows
 4. Dedupe using another CSV
 5. Validate parity
- 6. Split CSV into chunks
- 7. Exit
+6. Split CSV into chunks
+ 7. CSV stats summary
+ 8. Exit
 +> 4
  CSV file path: /tmp/source.csv
  Source CSV separator:
@@ -184,7 +187,8 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
 4. Dedupe using another CSV
 5. Validate parity
  6. Split CSV into chunks
- 7. Exit
+ 7. CSV stats summary
+ 8. Exit
 +> 5
  Left CSV file path: /tmp/left.csv
  Right CSV file path: /tmp/right.csv
@@ -224,7 +228,8 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
  4. Dedupe using another CSV
  5. Validate parity
  6. Split CSV into chunks
- 7. Exit
+ 7. CSV stats summary
+ 8. Exit
 +> 6
  Source CSV file path: /tmp/people.csv
  Choose separator:
@@ -246,6 +251,48 @@ Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
 -Chunks written: 25
 -/tmp/people_part_001.csv
 ```
+
+### 11. CSV stats interaction example
+
+Legend: ` ` = prompt/menu, `+` = user input, `-` = tool output
+
+```diff
+ CSV Tool Menu
+ 1. Extract column
+ 2. Extract rows (range)
+ 3. Randomize rows
+ 4. Dedupe using another CSV
+ 5. Validate parity
+ 6. Split CSV into chunks
+ 7. CSV stats summary
+ 8. Exit
++> 7
+ CSV file path: /tmp/people.csv
+ Choose separator:
+ 1. comma (,)
+ 2. tab (\t)
+ 3. semicolon (;)
+ 4. pipe (|)
+ 5. custom
++Separator choice [1]: 1
+ Headers present? [Y/n]:
+ Output destination:
+ 1. console
+ 2. file
++Output destination [1]: 1
+-CSV Stats Summary
+-Rows: 3
+-Columns: 2
+-Headers: name, city
+-Column completeness:
+-  name: non_blank=3 blank=0
+-  city: non_blank=3 blank=0
+```
+
+### 12. CSV stats large-file behavior
+
+- Stats scanning is streaming (`CSV.foreach`), processed in one pass.
+- Memory grows with per-column aggregates (`column_stats`), not with total row count.
 
 ## Testing
 

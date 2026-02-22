@@ -2,15 +2,15 @@
 
 The codebase follows a DDD-lite layered structure:
 
-- `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, `RandomizationSession`, `CrossCsvDedupeSession`, and `CsvSplitSession` aggregates + supporting entities/value objects).
-- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`, `RunCsvParity`, `RunCsvSplit`).
+- `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, `RandomizationSession`, `CrossCsvDedupeSession`, `ParitySession`, `SplitSession`, and `CsvStatsSession` aggregates + supporting entities/value objects).
+- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`, `RunCsvParity`, `RunCsvSplit`, `RunCsvStats`).
 - `infrastructure/`: CSV reading/streaming/comparison and output adapters (console/file).
 - `interface/cli/`: menu, prompts, workflows, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
 ## Workflow boundary (standardized)
 
-For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`, `CSV Split`), the boundary is:
+For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`, `CSV Split`, `CSV Stats`), the boundary is:
 
 - `interface/cli/workflows/*`: owns prompts, stdout rendering, and user-facing error presentation.
 - `interface/cli/workflows/builders/*`: builds domain sessions/aggregates from prompt results.
@@ -34,6 +34,7 @@ Current usage:
 - `RunCrossCsvDedupeWorkflow` uses `WorkflowStepPipeline` + `Steps::CrossCsvDedupe::*`.
 - `RunCsvParityWorkflow` uses `WorkflowStepPipeline` + `Steps::Parity::*`.
 - `RunCsvSplitWorkflow` uses `WorkflowStepPipeline` + `Steps::CsvSplit::*`.
+- `RunCsvStatsWorkflow` uses `WorkflowStepPipeline` + `Steps::CsvStats::*`.
 
 ## Adding New Concepts
 
@@ -109,7 +110,7 @@ For a new function type, prefer one of these patterns:
 
 ## Domain model
 
-Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`, and `CSV Split`.
+Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`, `CSV Split`, and `CSV Stats`.
 
 ### Cross-CSV Dedupe (Large-file behavior)
 
@@ -476,6 +477,63 @@ classDiagram
   RunCsvSplit --> CsvSplitManifestWriter
 ```
 
+### CSV Stats
+
+Core DDD structure:
+
+- Aggregate root: `StatsSession`
+  - Captures one stats summary request.
+  - Holds source profile and output destination.
+- Entity:
+  - `StatsSource` (path + separator + header mode)
+- Value objects:
+  - `StatsOptions` (currently lightweight; keeps option growth explicit)
+  - Shared `OutputDestination` (`console` or `file(path)`)
+- Application service:
+  - `Application::UseCases::RunCsvStats` orchestrates stats scanning and output routing.
+- Infrastructure adapters:
+  - `Infrastructure::CSV::CsvStatsScanner` (streaming one-pass row aggregation)
+  - `Infrastructure::Output::CsvStatsFileWriter` (metric/value artifact writer)
+- Interface adapters:
+  - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Workflows::RunCsvStatsWorkflow`
+  - `Interface::CLI::Workflows::Builders::CsvStatsSessionBuilder`
+  - `Interface::CLI::Workflows::Steps::WorkflowStepPipeline`
+  - `Interface::CLI::Workflows::Steps::CsvStats::*`
+  - `Interface::CLI::Workflows::Presenters::CsvStatsPresenter`
+  - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
+  - `Interface::CLI::Prompts::*`
+  - `Interface::CLI::Errors::Presenter`
+
+```mermaid
+classDiagram
+  direction LR
+  class MenuLoop
+  class RunCsvStatsWorkflow
+  class Prompts
+  class Errors
+  class RunCsvStats
+  class StatsSession
+  class StatsSource
+  class StatsOptions
+  class OutputDestination
+  class CsvStatsScanner
+  class CsvStatsFileWriter
+  class CsvStatsPresenter
+
+  MenuLoop --> RunCsvStatsWorkflow : invokes
+  RunCsvStatsWorkflow --> Prompts : uses
+  RunCsvStatsWorkflow --> Errors : reports failures
+  RunCsvStatsWorkflow --> CsvStatsPresenter : renders
+  RunCsvStatsWorkflow --> RunCsvStats : calls
+  RunCsvStats --> StatsSession : orchestrates
+  StatsSession o-- StatsSource
+  StatsSession o-- StatsOptions
+  StatsSession o-- OutputDestination
+  RunCsvStats --> CsvStatsScanner
+  RunCsvStats --> CsvStatsFileWriter
+```
+
 ## Project layout
 
 ```text
@@ -487,6 +545,7 @@ lib/csvtool/domain/row_randomization_session/*
 lib/csvtool/domain/cross_csv_dedupe_session/*
 lib/csvtool/domain/csv_parity_session/*
 lib/csvtool/domain/csv_split_session/*
+lib/csvtool/domain/csv_stats_session/*
 lib/csvtool/domain/shared/output_destination.rb
 lib/csvtool/application/use_cases/run_extraction.rb
 lib/csvtool/application/use_cases/run_row_extraction.rb
@@ -494,6 +553,7 @@ lib/csvtool/application/use_cases/run_row_randomization.rb
 lib/csvtool/application/use_cases/run_cross_csv_dedupe.rb
 lib/csvtool/application/use_cases/run_csv_parity.rb
 lib/csvtool/application/use_cases/run_csv_split.rb
+lib/csvtool/application/use_cases/run_csv_stats.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/interface/cli/menu_loop.rb
