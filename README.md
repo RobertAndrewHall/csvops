@@ -47,6 +47,12 @@ Select `1` for column extraction, `2` for row-range extraction, `3` for row rand
 
 Each menu action runs through a dedicated CLI workflow (`interface/cli/workflows/*`) that handles prompts/output and delegates execution to an interface-agnostic application use case.
 
+Workflow internals are split into small composable parts:
+
+- `workflows/builders/*` for session construction
+- `workflows/support/*` for shared mapping/dispatch utilities
+- `workflows/presenters/*` for output formatting and summaries
+
 Prompt flow by action:
 
 - `Extract column`: file path, separator, optional header filter + column select, skip blanks, preview/confirm, output destination.
