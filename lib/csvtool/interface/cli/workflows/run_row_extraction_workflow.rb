@@ -9,6 +9,12 @@ require "csvtool/interface/cli/workflows/builders/row_extraction_session_builder
 require "csvtool/interface/cli/workflows/presenters/row_extraction_presenter"
 require "csvtool/interface/cli/workflows/support/output_destination_mapper"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
+require "csvtool/interface/cli/workflows/steps/workflow_step_pipeline"
+require "csvtool/interface/cli/workflows/steps/row_extraction/collect_source_step"
+require "csvtool/interface/cli/workflows/steps/row_extraction/read_headers_step"
+require "csvtool/interface/cli/workflows/steps/row_extraction/collect_range_step"
+require "csvtool/interface/cli/workflows/steps/row_extraction/collect_destination_step"
+require "csvtool/interface/cli/workflows/steps/row_extraction/execute_step"
 require "csvtool/domain/row_session/row_range"
 module Csvtool
   module Interface
@@ -26,53 +32,30 @@ module Csvtool
           end
 
           def call
-            file_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-            col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-            return if col_sep.nil?
+            context = {
+              use_case: @use_case,
+              session_builder: @session_builder,
+              output_destination_mapper: @output_destination_mapper,
+              handle_error: method(:handle_error)
+            }
 
-            header_result = @use_case.read_headers(file_path: file_path, col_sep: col_sep)
-            return handle_error(header_result) unless header_result.ok?
-            headers = header_result.data[:headers]
-
-            @stdout.print "Start row (1-based, inclusive): "
-            start_row_input = @stdin.gets&.strip.to_s
-            @stdout.print "End row (1-based, inclusive): "
-            end_row_input = @stdin.gets&.strip.to_s
-            row_range = Domain::RowSession::RowRange.from_inputs(
-              start_row_input: start_row_input,
-              end_row_input: end_row_input
-            )
-
-            output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-              stdin: @stdin,
-              stdout: @stdout,
-              errors: @errors
-            ).call
-            return if output_destination.nil?
-
-            session = @session_builder.call(
-              file_path: file_path,
-              col_sep: col_sep,
-              row_range: row_range,
-              destination: @output_destination_mapper.call(output_destination)
-            )
-
-            presenter = Presenters::RowExtractionPresenter.new(
-              stdout: @stdout,
-              headers: headers,
-              col_sep: ","
-            )
-            extract_result = @use_case.extract(
-              session: session,
-              headers: headers,
-              on_row: ->(fields) { presenter.print_row(fields) }
-            )
-            return handle_error(extract_result) unless extract_result.ok?
-
-            presenter.print_file_written(extract_result.data[:output_path]) if extract_result.data[:wrote_rows]
-            return if extract_result.data[:matched]
-
-            @errors.row_range_out_of_bounds(extract_result.data[:row_count])
+            pipeline = Steps::WorkflowStepPipeline.new(steps: [
+              Steps::RowExtraction::CollectSourceStep.new(
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+              ),
+              Steps::RowExtraction::ReadHeadersStep.new,
+              Steps::RowExtraction::CollectRangeStep.new(stdin: @stdin, stdout: @stdout),
+              Steps::RowExtraction::CollectDestinationStep.new(
+                output_destination_prompt: Interface::CLI::Prompts::OutputDestinationPrompt.new(
+                  stdin: @stdin,
+                  stdout: @stdout,
+                  errors: @errors
+                )
+              ),
+              Steps::RowExtraction::ExecuteStep.new(stdout: @stdout, errors: @errors)
+            ])
+            pipeline.call(context)
           rescue Domain::RowSession::InvalidStartRowError
             @errors.invalid_start_row
           rescue Domain::RowSession::InvalidEndRowError

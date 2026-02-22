@@ -16,9 +16,15 @@ For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomi
 - `interface/cli/workflows/builders/*`: builds domain sessions/aggregates from prompt results.
 - `interface/cli/workflows/support/*`: shared workflow utilities (error routing, output destination mapping).
 - `interface/cli/workflows/presenters/*`: workflow-level output/summary rendering.
+- `interface/cli/workflows/steps/*`: optional step-pipeline units for complex workflow orchestration.
 - `application/use_cases/*`: interface-agnostic orchestration with request/result style contracts.
 - `domain/*`: invariants and domain policies.
 - `infrastructure/*`: CSV mechanics and output adapters.
+
+Current usage:
+
+- `RunRowExtractionWorkflow` uses a lightweight step pipeline (`WorkflowStepPipeline` + `Steps::RowExtraction::*`).
+- Other workflows currently use direct orchestration and can adopt the pipeline when complexity increases.
 
 ## Adding New Concepts
 
@@ -195,6 +201,8 @@ Core DDD structure:
   - `Interface::CLI::Workflows::Builders::RowExtractionSessionBuilder`
   - `Interface::CLI::Workflows::Presenters::RowExtractionPresenter`
   - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
+  - `Interface::CLI::Workflows::Steps::WorkflowStepPipeline`
+  - `Interface::CLI::Workflows::Steps::RowExtraction::*`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -358,6 +366,7 @@ lib/csvtool/interface/cli/workflows/*
 lib/csvtool/interface/cli/workflows/builders/*
 lib/csvtool/interface/cli/workflows/support/*
 lib/csvtool/interface/cli/workflows/presenters/*
+lib/csvtool/interface/cli/workflows/steps/*
 lib/csvtool/interface/cli/prompts/*
 lib/csvtool/interface/cli/errors/presenter.rb
 test/csvtool/cli_test.rb         # end-to-end workflow tests
