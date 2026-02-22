@@ -3,6 +3,7 @@
 require_relative "../test_helper"
 require "csvtool/cli"
 require "tmpdir"
+require "fileutils"
 
 class TestCli < Minitest::Test
   def fixture_path(name)
@@ -16,20 +17,26 @@ class TestCli < Minitest::Test
     assert_includes output.string, "CSV Tool Menu"
   end
 
-  def test_split_workflow_shell_can_run_and_return_to_menu
+  def test_split_workflow_splits_csv_in_menu_flow
     output = StringIO.new
-    input = [
-      "6",
-      fixture_path("sample_people.csv"),
-      "10",
-      "7"
-    ].join("\n") + "\n"
+    Dir.mktmpdir do |dir|
+      source_path = File.join(dir, "people.csv")
+      FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
+      input = [
+        "6",
+        source_path,
+        "10",
+        "7"
+      ].join("\n") + "\n"
 
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+      status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
 
-    assert_equal 0, status
-    assert_includes output.string, "Split workflow ready."
-    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+      assert_equal 0, status
+      assert_includes output.string, "Chunks written: 3"
+      assert File.file?(File.join(dir, "people_part_001.csv"))
+      assert File.file?(File.join(dir, "people_part_002.csv"))
+      assert File.file?(File.join(dir, "people_part_003.csv"))
+    end
   end
 
   def test_end_to_end_console_happy_path_prints_expected_values
@@ -615,7 +622,7 @@ class TestCli < Minitest::Test
     output = StringIO.new
     status = Csvtool::CLI.start(
       ["menu"],
-      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n4\n6\n"),
+      stdin: StringIO.new("1\n/tmp/does-not-exist.csv\n4\n7\n"),
       stdout: output,
       stderr: StringIO.new
     )
