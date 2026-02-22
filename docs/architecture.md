@@ -13,9 +13,84 @@ The codebase follows a DDD-lite layered structure:
 For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`), the boundary is:
 
 - `interface/cli/workflows/*`: owns prompts, stdout rendering, and user-facing error presentation.
+- `interface/cli/workflows/builders/*`: builds domain sessions/aggregates from prompt results.
+- `interface/cli/workflows/support/*`: shared workflow utilities (error routing, output destination mapping).
+- `interface/cli/workflows/presenters/*`: workflow-level output/summary rendering.
 - `application/use_cases/*`: interface-agnostic orchestration with request/result style contracts.
 - `domain/*`: invariants and domain policies.
 - `infrastructure/*`: CSV mechanics and output adapters.
+
+## Adding New Concepts
+
+Use this checklist when introducing a new capability (for example: a new transformation function, validator, comparer, or exporter).
+
+### 1) Classify the concept first
+
+- `Workflow concept`: interactive flow and prompt sequence.
+- `Domain concept`: business rule/invariant and core vocabulary.
+- `Application concept`: use-case orchestration and request/result contract.
+- `Infrastructure concept`: file/CSV mechanics, streaming, persistence, or external IO.
+
+If it does not clearly fit one layer, split it until each part has one responsibility.
+
+### 2) Add the feature vertically (thin slice)
+
+Implement in this order:
+
+1. `interface/cli/workflows/*`: new workflow entry or new branch in an existing workflow.
+2. `interface/cli/prompts/*`: prompts for user inputs.
+3. `interface/cli/workflows/builders/*`: build domain session/request objects.
+4. `application/use_cases/*`: interface-agnostic use case with `Result` success/failure.
+5. `domain/*`: new entities/value objects/aggregate changes for invariants.
+6. `infrastructure/*`: adapters needed by the use case.
+7. `interface/cli/workflows/presenters/*`: output and summaries.
+
+Keep each step testable on its own before moving to the next.
+
+### 3) Function type patterns
+
+For a new function type, prefer one of these patterns:
+
+- `Transform` (changes output rows/values):
+  - Domain: transformation options/value objects.
+  - Application: orchestrate transform over streamed rows.
+  - Infrastructure: stream reader/writer implementation.
+- `Validate` (checks and reports findings):
+  - Domain: validation policy and finding model.
+  - Application: run checks and return findings in result data.
+  - Presenter: format findings and summary.
+- `Compare` (source vs reference logic):
+  - Domain: mapping/selectors/match options.
+  - Application: compare strategy and stats.
+  - Infrastructure: dual-source readers and selector helpers.
+- `Export` (destination-focused):
+  - Domain: output destination value object.
+  - Application: orchestrate write path only.
+  - Infrastructure: writer adapter.
+
+### 4) Required boundaries and rules
+
+- Workflows do not contain business rules.
+- Use cases do not prompt or print.
+- Domain does not depend on interface or infrastructure.
+- Infrastructure does not own workflow decisions.
+- Shared workflow helpers belong under `workflows/support/*`.
+- Reusable construction logic belongs under `workflows/builders/*`.
+- Rendering/summary formatting belongs under `workflows/presenters/*`.
+
+### 5) Minimum tests for each new concept
+
+- Prompt tests for each new prompt class.
+- Builder tests for each new builder class.
+- Use-case tests for request/result behavior.
+- Workflow behavior tests for prompt + output integration.
+- One end-to-end CLI test for the happy path.
+
+### 6) Naming and structure guidance
+
+- Prefer domain-first names (`RowRange`, `ColumnSelection`, `MatchOptions`) over technical names.
+- Use `Run<Concept>` for use cases and `Run<Concept>Workflow` for workflows.
+- Keep one file per class and mirror structure under `test/csvtool/...`.
 
 ## Domain model
 
@@ -55,6 +130,8 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, an
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunExtractionWorkflow`
+  - `Interface::CLI::Workflows::Builders::ColumnSessionBuilder`
+  - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -115,6 +192,9 @@ Core DDD structure:
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunRowExtractionWorkflow`
+  - `Interface::CLI::Workflows::Builders::RowExtractionSessionBuilder`
+  - `Interface::CLI::Workflows::Presenters::RowExtractionPresenter`
+  - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -163,6 +243,9 @@ Core DDD structure:
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunRowRandomizationWorkflow`
+  - `Interface::CLI::Workflows::Builders::RowRandomizationSessionBuilder`
+  - `Interface::CLI::Workflows::Presenters::RowRandomizationPresenter`
+  - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -215,6 +298,9 @@ Core DDD structure:
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
   - `Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow`
+  - `Interface::CLI::Workflows::Builders::CrossCsvDedupeSessionBuilder`
+  - `Interface::CLI::Workflows::Presenters::CrossCsvDedupePresenter`
+  - `Interface::CLI::Workflows::Support::{OutputDestinationMapper,ResultErrorHandler}`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -269,6 +355,9 @@ lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/interface/cli/menu_loop.rb
 lib/csvtool/interface/cli/workflows/*
+lib/csvtool/interface/cli/workflows/builders/*
+lib/csvtool/interface/cli/workflows/support/*
+lib/csvtool/interface/cli/workflows/presenters/*
 lib/csvtool/interface/cli/prompts/*
 lib/csvtool/interface/cli/errors/presenter.rb
 test/csvtool/cli_test.rb         # end-to-end workflow tests
