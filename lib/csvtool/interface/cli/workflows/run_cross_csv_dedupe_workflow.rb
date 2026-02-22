@@ -33,8 +33,8 @@ module Csvtool
             source_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
             return @errors.file_not_found(source_path) unless File.file?(source_path)
 
-            @stdout.puts "Source CSV separator:"
-            source_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+            source_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+              .call(label: "Source CSV separator:")
             return if source_col_sep.nil?
             source_headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
               .call(label: "Source headers present? [Y/n]: ")
@@ -44,12 +44,12 @@ module Csvtool
               headers_present: source_headers_present
             )
 
-            @stdout.print "Reference CSV file path: "
-            reference_path = @stdin.gets&.strip.to_s
+            reference_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout)
+              .call(label: "Reference CSV file path: ")
             return @errors.file_not_found(reference_path) unless File.file?(reference_path)
 
-            @stdout.puts "Reference CSV separator:"
-            reference_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+            reference_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
+              .call(label: "Reference CSV separator:")
             return if reference_col_sep.nil?
             reference_headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
               .call(label: "Reference headers present? [Y/n]: ")

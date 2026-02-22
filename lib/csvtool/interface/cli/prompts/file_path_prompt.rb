@@ -5,13 +5,15 @@ module Csvtool
     module CLI
       module Prompts
         class FilePathPrompt
+          DEFAULT_LABEL = "CSV file path: "
+
           def initialize(stdin:, stdout:)
             @stdin = stdin
             @stdout = stdout
           end
 
-          def call
-            @stdout.print "CSV file path: "
+          def call(label: DEFAULT_LABEL)
+            @stdout.print label
             @stdin.gets&.strip.to_s
           end
         end

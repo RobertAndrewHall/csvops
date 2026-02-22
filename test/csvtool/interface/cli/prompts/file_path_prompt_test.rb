@@ -8,4 +8,13 @@ class FilePathPromptTest < Minitest::Test
     prompt = Csvtool::Interface::CLI::Prompts::FilePathPrompt.new(stdin: StringIO.new("  /tmp/a.csv  \n"), stdout: StringIO.new)
     assert_equal "/tmp/a.csv", prompt.call
   end
+
+  def test_supports_custom_label
+    out = StringIO.new
+    prompt = Csvtool::Interface::CLI::Prompts::FilePathPrompt.new(stdin: StringIO.new("/tmp/a.csv\n"), stdout: out)
+
+    prompt.call(label: "Reference CSV file path: ")
+
+    assert_includes out.string, "Reference CSV file path: "
+  end
 end

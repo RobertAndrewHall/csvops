@@ -28,4 +28,14 @@ class SeparatorPromptTest < Minitest::Test
     assert_nil prompt.call
     assert_includes errors.calls, :empty_custom_separator
   end
+
+  def test_supports_custom_label
+    errors = FakeErrors.new
+    out = StringIO.new
+    prompt = Csvtool::Interface::CLI::Prompts::SeparatorPrompt.new(stdin: StringIO.new("\n"), stdout: out, errors: errors)
+
+    prompt.call(label: "Reference CSV separator:")
+
+    assert_includes out.string, "Reference CSV separator:"
+  end
 end

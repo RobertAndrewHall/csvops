@@ -5,14 +5,16 @@ module Csvtool
     module CLI
       module Prompts
         class SeparatorPrompt
+          DEFAULT_LABEL = "Choose separator:"
+
           def initialize(stdin:, stdout:, errors:)
             @stdin = stdin
             @stdout = stdout
             @errors = errors
           end
 
-          def call
-            @stdout.puts "Choose separator:"
+          def call(label: DEFAULT_LABEL)
+            @stdout.puts label
             @stdout.puts "1. comma (,)"
             @stdout.puts "2. tab (\\t)"
             @stdout.puts "3. semicolon (;)"
