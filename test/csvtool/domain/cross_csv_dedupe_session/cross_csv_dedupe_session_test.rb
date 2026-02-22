@@ -45,4 +45,31 @@ class CrossCsvDedupeSessionTest < Minitest::Test
     assert_equal match_options, updated.match_options
     assert_equal destination, updated.output_destination
   end
+
+  def test_rejects_invalid_source_type
+    reference = Csvtool::Domain::CrossCsvDedupeSession::CsvProfile.new(
+      path: "/tmp/reference.csv",
+      separator: ",",
+      headers_present: true
+    )
+    key_mapping = Csvtool::Domain::CrossCsvDedupeSession::KeyMapping.new(
+      source_selector: Csvtool::Domain::CrossCsvDedupeSession::ColumnSelector.from_input(headers_present: true, input: "source_id"),
+      reference_selector: Csvtool::Domain::CrossCsvDedupeSession::ColumnSelector.from_input(headers_present: true, input: "reference_id")
+    )
+    match_options = Csvtool::Domain::CrossCsvDedupeSession::MatchOptions.new(
+      trim_whitespace: true,
+      case_insensitive: false
+    )
+
+    error = assert_raises(ArgumentError) do
+      Csvtool::Domain::CrossCsvDedupeSession::CrossCsvDedupeSession.start(
+        source: "bad",
+        reference: reference,
+        key_mapping: key_mapping,
+        match_options: match_options
+      )
+    end
+
+    assert_equal "source must be CsvProfile", error.message
+  end
 end

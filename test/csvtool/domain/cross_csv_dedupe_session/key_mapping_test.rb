@@ -17,4 +17,15 @@ class CrossCsvDedupeKeyMappingTest < Minitest::Test
     assert_equal source_selector, mapping.source_selector
     assert_equal reference_selector, mapping.reference_selector
   end
+
+  def test_rejects_non_selector_inputs
+    error = assert_raises(ArgumentError) do
+      Csvtool::Domain::CrossCsvDedupeSession::KeyMapping.new(
+        source_selector: "id",
+        reference_selector: "external_id"
+      )
+    end
+
+    assert_equal "selectors must be ColumnSelector", error.message
+  end
 end

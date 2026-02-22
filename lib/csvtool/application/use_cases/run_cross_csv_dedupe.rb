@@ -8,6 +8,7 @@ require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/cross_csv_deduper"
+require "csvtool/infrastructure/csv/selector_validator"
 require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
 require "csvtool/domain/cross_csv_dedupe_session/column_selector"
 require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
@@ -25,6 +26,7 @@ module Csvtool
           @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
           @header_reader = Infrastructure::CSV::HeaderReader.new
           @deduper = Infrastructure::CSV::CrossCsvDeduper.new
+          @selector_validator = Infrastructure::CSV::SelectorValidator.new(header_reader: @header_reader)
         end
 
         def call
@@ -162,19 +164,7 @@ module Csvtool
             input: column_input
           )
 
-          if selector.headers_present?
-            headers = @header_reader.call(file_path: profile.path, col_sep: profile.separator)
-            return nil if headers.empty?
-            return selector if headers.include?(selector.value)
-
-            nil
-          else
-            first_row = ::CSV.open(profile.path, "r", headers: false, col_sep: profile.separator, &:first)
-            return nil if first_row.nil?
-            return nil if selector.value > first_row.length
-
-            selector
-          end
+          @selector_validator.valid?(profile: profile, selector: selector) ? selector : nil
         rescue ArgumentError
           nil
         end
