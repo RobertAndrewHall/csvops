@@ -49,16 +49,38 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, an
   - `Interface::CLI::Errors::Presenter`
 
 ```mermaid
-flowchart LR
-  UI["Interface CLI\n(Menu + Prompts + Errors)"] --> APP["Application Use Case\nRunExtraction"]
-  APP --> AGG["Domain Aggregate\nColumnSession"]
+classDiagram
+  direction LR
+  class MenuLoop
+  class Prompts
+  class Errors
+  class RunExtraction
+  class ColumnSession
+  class CsvSource
+  class ColumnSelection
+  class ExtractionOptions
+  class Preview
+  class ExtractionValue
+  class OutputDestination
+  class HeaderReader
+  class ValueStreamer
+  class ConsoleWriter
+  class CsvFileWriter
 
-  AGG --> E1["Entity\nCsvSource"]
-  AGG --> E2["Entity\nColumnSelection"]
-  AGG --> V1["Value Objects\nSeparator / ExtractionOptions / Preview / Shared OutputDestination / ExtractionValue"]
-
-  APP --> INFCSV["Infrastructure CSV\nHeaderReader + ValueStreamer"]
-  APP --> INFOUT["Infrastructure Output\nConsoleWriter + CsvFileWriter"]
+  MenuLoop --> RunExtraction : invokes
+  Prompts --> RunExtraction : provides input
+  RunExtraction --> Errors : reports failures
+  RunExtraction --> ColumnSession : orchestrates
+  ColumnSession o-- CsvSource
+  ColumnSession o-- ColumnSelection
+  ColumnSession o-- ExtractionOptions
+  ColumnSession o-- Preview
+  Preview o-- ExtractionValue
+  ColumnSession o-- OutputDestination
+  RunExtraction --> HeaderReader
+  RunExtraction --> ValueStreamer
+  RunExtraction --> ConsoleWriter
+  RunExtraction --> CsvFileWriter
 ```
 
 ### Row Extraction
@@ -86,15 +108,32 @@ Core DDD structure:
   - `Interface::CLI::Errors::Presenter`
 
 ```mermaid
-flowchart LR
-  UI2["Interface CLI\n(Menu + Prompts + Errors)"] --> APP2["Application Use Case\nRunRowExtraction"]
-  APP2 --> AGG2["Domain Aggregate\nRowSession"]
+classDiagram
+  direction LR
+  class MenuLoop
+  class Prompts
+  class Errors
+  class RunRowExtraction
+  class RowSession
+  class RowSource
+  class RowRange
+  class OutputDestination
+  class HeaderReader
+  class RowStreamer
+  class CsvRowConsoleWriter
+  class CsvRowFileWriter
 
-  AGG2 --> E3["Entity\nRowSource"]
-  AGG2 --> V2["Value Objects\nRowRange / Shared OutputDestination"]
-
-  APP2 --> INFCSV2["Infrastructure CSV\nHeaderReader + RowStreamer"]
-  APP2 --> INFOUT2["Infrastructure Output\nCsvRowConsoleWriter + CsvRowFileWriter"]
+  MenuLoop --> RunRowExtraction : invokes
+  Prompts --> RunRowExtraction : provides input
+  RunRowExtraction --> Errors : reports failures
+  RunRowExtraction --> RowSession : orchestrates
+  RowSession o-- RowSource
+  RowSession o-- RowRange
+  RowSession o-- OutputDestination
+  RunRowExtraction --> HeaderReader
+  RunRowExtraction --> RowStreamer
+  RunRowExtraction --> CsvRowConsoleWriter
+  RunRowExtraction --> CsvRowFileWriter
 ```
 
 ### Row Randomization
@@ -119,14 +158,28 @@ Core DDD structure:
   - `Interface::CLI::Errors::Presenter`
 
 ```mermaid
-flowchart LR
-  UI3["Interface CLI\n(Menu + Prompts + Errors)"] --> APP3["Application Use Case\nRunRowRandomization"]
-  APP3 --> AGG3["Domain Aggregate\nRandomizationSession"]
+classDiagram
+  direction LR
+  class MenuLoop
+  class Prompts
+  class Errors
+  class RunRowRandomization
+  class RandomizationSession
+  class RandomizationSource
+  class RandomizationOptions
+  class OutputDestination
+  class HeaderReader
+  class RowRandomizer
 
-  AGG3 --> E4["Entity\nRandomizationSource"]
-  AGG3 --> V3["Value Objects\nRandomizationOptions / Shared OutputDestination"]
-
-  APP3 --> INFCSV3["Infrastructure CSV\nHeaderReader + RowRandomizer"]
+  MenuLoop --> RunRowRandomization : invokes
+  Prompts --> RunRowRandomization : provides input
+  RunRowRandomization --> Errors : reports failures
+  RunRowRandomization --> RandomizationSession : orchestrates
+  RandomizationSession o-- RandomizationSource
+  RandomizationSession o-- RandomizationOptions
+  RandomizationSession o-- OutputDestination
+  RunRowRandomization --> HeaderReader
+  RunRowRandomization --> RowRandomizer
 ```
 
 ### Cross-CSV Dedupe
@@ -155,15 +208,36 @@ Core DDD structure:
   - `Interface::CLI::Errors::Presenter`
 
 ```mermaid
-flowchart LR
-  UI4["Interface CLI\n(Menu + Prompts + Errors)"] --> WF4["CLI Workflow\nRunCrossCsvDedupeWorkflow"]
-  WF4 --> APP4["Application Use Case\nRunCrossCsvDedupe"]
-  APP4 --> AGG4["Domain Aggregate\nCrossCsvDedupeSession"]
+classDiagram
+  direction LR
+  class MenuLoop
+  class RunCrossCsvDedupeWorkflow
+  class Prompts
+  class Errors
+  class RunCrossCsvDedupe
+  class CrossCsvDedupeSession
+  class CsvProfile
+  class KeyMapping
+  class ColumnSelector
+  class MatchOptions
+  class OutputDestination
+  class HeaderReader
+  class SelectorValidator
+  class CrossCsvDeduper
 
-  AGG4 --> E5["Entities\nCsvProfile(source/reference) + KeyMapping"]
-  AGG4 --> V4["Value Objects\nColumnSelector / MatchOptions / Shared OutputDestination"]
-
-  APP4 --> INFCSV4["Infrastructure CSV\nHeaderReader + SelectorValidator + CrossCsvDeduper"]
+  MenuLoop --> RunCrossCsvDedupeWorkflow : invokes
+  Prompts --> RunCrossCsvDedupeWorkflow : provides input
+  RunCrossCsvDedupeWorkflow --> Errors : reports failures
+  RunCrossCsvDedupeWorkflow --> RunCrossCsvDedupe : calls
+  RunCrossCsvDedupe --> CrossCsvDedupeSession : orchestrates
+  CrossCsvDedupeSession o-- CsvProfile
+  CrossCsvDedupeSession o-- KeyMapping
+  KeyMapping o-- ColumnSelector
+  CrossCsvDedupeSession o-- MatchOptions
+  CrossCsvDedupeSession o-- OutputDestination
+  RunCrossCsvDedupe --> HeaderReader
+  RunCrossCsvDedupe --> SelectorValidator
+  RunCrossCsvDedupe --> CrossCsvDeduper
 ```
 
 ## Project layout
