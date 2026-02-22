@@ -320,19 +320,19 @@ Or:
 bundle exec rake test
 ```
 
-## Alpha release
+## Release
 
-Current prerelease version: `0.9.0.alpha`
+Current version: `1.0.0`
 
-Install prerelease from RubyGems:
+Install from RubyGems:
 
 ```bash
-gem install csvops --pre
+gem install csvops
 ```
 
 Release runbook:
 
-- `docs/release-v0.9.0-alpha.md`
+- `docs/release-v1.0.0.md`
 
 
 ## Architecture
