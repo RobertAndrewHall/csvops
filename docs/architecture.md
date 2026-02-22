@@ -3,14 +3,14 @@
 The codebase follows a DDD-lite layered structure:
 
 - `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, `RandomizationSession`, and `CrossCsvDedupeSession` aggregates + supporting entities/value objects).
-- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`).
-- `infrastructure/`: CSV reading/streaming and output adapters (console/file), plus cross-CSV dedupe adapter.
+- `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`, `RunCsvParity`).
+- `infrastructure/`: CSV reading/streaming/comparison and output adapters (console/file).
 - `interface/cli/`: menu, prompts, workflows, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
 ## Workflow boundary (standardized)
 
-For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`), the boundary is:
+For all interactive domains (`Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, `CSV Parity`), the boundary is:
 
 - `interface/cli/workflows/*`: owns prompts, stdout rendering, and user-facing error presentation.
 - `interface/cli/workflows/builders/*`: builds domain sessions/aggregates from prompt results.
@@ -32,6 +32,7 @@ Current usage:
 - `RunRowExtractionWorkflow` uses `WorkflowStepPipeline` + `Steps::RowExtraction::*`.
 - `RunRowRandomizationWorkflow` uses `WorkflowStepPipeline` + `Steps::RowRandomization::*`.
 - `RunCrossCsvDedupeWorkflow` uses `WorkflowStepPipeline` + `Steps::CrossCsvDedupe::*`.
+- `RunCsvParityWorkflow` uses `WorkflowStepPipeline` + `Steps::Parity::*`.
 
 ## Adding New Concepts
 
@@ -107,7 +108,7 @@ For a new function type, prefer one of these patterns:
 
 ## Domain model
 
-Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, and `Cross-CSV Dedupe`.
+Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, `Cross-CSV Dedupe`, and `CSV Parity`.
 
 ### Cross-CSV Dedupe (Large-file behavior)
 
@@ -366,6 +367,60 @@ classDiagram
   RunCrossCsvDedupe --> CsvCrossCsvDedupeFileWriter
 ```
 
+### CSV Parity
+
+Core DDD structure:
+
+- Aggregate root: `ParitySession`
+  - Captures one parity check request.
+  - Holds left/right source paths and parity options.
+- Entities:
+  - `SourcePair` (left and right file paths)
+- Value objects:
+  - `ParityOptions` (separator + header mode)
+- Application service:
+  - `Application::UseCases::RunCsvParity` orchestrates parity validation and returns request/result style payloads.
+- Infrastructure adapters:
+  - `Infrastructure::CSV::HeaderReader`
+  - `Infrastructure::CSV::CsvParityComparator` (streaming count-delta strategy with duplicate-aware semantics)
+- Interface adapters:
+  - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Workflows::RunCsvParityWorkflow`
+  - `Interface::CLI::Workflows::Builders::CsvParitySessionBuilder`
+  - `Interface::CLI::Workflows::Steps::WorkflowStepPipeline`
+  - `Interface::CLI::Workflows::Steps::Parity::*`
+  - `Interface::CLI::Workflows::Presenters::CsvParityPresenter`
+  - `Interface::CLI::Workflows::Support::ResultErrorHandler`
+  - `Interface::CLI::Prompts::*`
+  - `Interface::CLI::Errors::Presenter`
+
+```mermaid
+classDiagram
+  direction LR
+  class MenuLoop
+  class RunCsvParityWorkflow
+  class Prompts
+  class Errors
+  class RunCsvParity
+  class ParitySession
+  class SourcePair
+  class ParityOptions
+  class HeaderReader
+  class CsvParityComparator
+  class CsvParityPresenter
+
+  MenuLoop --> RunCsvParityWorkflow : invokes
+  RunCsvParityWorkflow --> Prompts : uses
+  RunCsvParityWorkflow --> Errors : reports failures
+  RunCsvParityWorkflow --> CsvParityPresenter : renders
+  RunCsvParityWorkflow --> RunCsvParity : calls
+  RunCsvParity --> ParitySession : orchestrates
+  ParitySession o-- SourcePair
+  ParitySession o-- ParityOptions
+  RunCsvParity --> HeaderReader
+  RunCsvParity --> CsvParityComparator
+```
+
 ## Project layout
 
 ```text
@@ -375,11 +430,13 @@ lib/csvtool/domain/column_session/*
 lib/csvtool/domain/row_session/*
 lib/csvtool/domain/row_randomization_session/*
 lib/csvtool/domain/cross_csv_dedupe_session/*
+lib/csvtool/domain/csv_parity_session/*
 lib/csvtool/domain/shared/output_destination.rb
 lib/csvtool/application/use_cases/run_extraction.rb
 lib/csvtool/application/use_cases/run_row_extraction.rb
 lib/csvtool/application/use_cases/run_row_randomization.rb
 lib/csvtool/application/use_cases/run_cross_csv_dedupe.rb
+lib/csvtool/application/use_cases/run_csv_parity.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/interface/cli/menu_loop.rb
