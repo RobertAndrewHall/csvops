@@ -11,8 +11,8 @@ require "csvtool/infrastructure/output/csv_row_console_writer"
 require "csvtool/infrastructure/output/csv_row_file_writer"
 require "csvtool/domain/row_session/row_range"
 require "csvtool/domain/row_session/row_source"
-require "csvtool/domain/row_session/row_output_destination"
 require "csvtool/domain/row_session/row_session"
+require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
@@ -56,9 +56,9 @@ module Csvtool
           return if output_destination.nil?
           destination =
             if output_destination[:mode] == :file
-              Domain::RowSession::RowOutputDestination.file(path: output_destination[:path])
+              Domain::Shared::OutputDestination.file(path: output_destination[:path])
             else
-              Domain::RowSession::RowOutputDestination.console
+              Domain::Shared::OutputDestination.console
             end
           session = session.with_output_destination(destination)
 

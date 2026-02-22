@@ -12,8 +12,8 @@ require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
 require "csvtool/domain/cross_csv_dedupe_session/column_selector"
 require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
 require "csvtool/domain/cross_csv_dedupe_session/match_options"
-require "csvtool/domain/cross_csv_dedupe_session/output_destination"
 require "csvtool/domain/cross_csv_dedupe_session/cross_csv_dedupe_session"
+require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
@@ -108,9 +108,9 @@ module Csvtool
           return if output_destination.nil?
           destination =
             if output_destination[:mode] == :file
-              Domain::CrossCsvDedupeSession::OutputDestination.file(path: output_destination[:path])
+              Domain::Shared::OutputDestination.file(path: output_destination[:path])
             else
-              Domain::CrossCsvDedupeSession::OutputDestination.console
+              Domain::Shared::OutputDestination.console
             end
           session = session.with_output_destination(destination)
 

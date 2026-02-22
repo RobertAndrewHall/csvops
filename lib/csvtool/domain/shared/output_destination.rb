@@ -2,7 +2,7 @@
 
 module Csvtool
   module Domain
-    module ColumnSession
+    module Shared
       class OutputDestination
         attr_reader :mode, :path
 

@@ -8,7 +8,7 @@ require "csvtool/domain/column_session/column_selection"
 require "csvtool/domain/column_session/extraction_options"
 require "csvtool/domain/column_session/preview"
 require "csvtool/domain/column_session/extraction_value"
-require "csvtool/domain/column_session/output_destination"
+require "csvtool/domain/shared/output_destination"
 
 class ColumnSessionTest < Minitest::Test
   def test_state_transitions
@@ -25,7 +25,7 @@ class ColumnSessionTest < Minitest::Test
       values: [Csvtool::Domain::ColumnSession::ExtractionValue.new("Alice")]
     )
     session = session.with_preview(preview).confirm!.with_output_destination(
-      Csvtool::Domain::ColumnSession::OutputDestination.console
+      Csvtool::Domain::Shared::OutputDestination.console
     )
 
     assert_equal true, session.confirmed?

@@ -6,7 +6,7 @@ require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
 require "csvtool/domain/cross_csv_dedupe_session/column_selector"
 require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
 require "csvtool/domain/cross_csv_dedupe_session/match_options"
-require "csvtool/domain/cross_csv_dedupe_session/output_destination"
+require "csvtool/domain/shared/output_destination"
 
 class CrossCsvDedupeSessionTest < Minitest::Test
   def test_start_and_with_output_destination
@@ -36,7 +36,7 @@ class CrossCsvDedupeSessionTest < Minitest::Test
       match_options: match_options
     )
 
-    destination = Csvtool::Domain::CrossCsvDedupeSession::OutputDestination.console
+    destination = Csvtool::Domain::Shared::OutputDestination.console
     updated = session.with_output_destination(destination)
 
     assert_equal source, updated.source

@@ -11,8 +11,8 @@ require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/row_randomizer"
 require "csvtool/domain/row_randomization_session/randomization_source"
 require "csvtool/domain/row_randomization_session/randomization_options"
-require "csvtool/domain/row_randomization_session/randomization_output_destination"
 require "csvtool/domain/row_randomization_session/randomization_session"
+require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
@@ -55,9 +55,9 @@ module Csvtool
           return if output_destination.nil?
           destination =
             if output_destination[:mode] == :file
-              Domain::RowRandomizationSession::RandomizationOutputDestination.file(path: output_destination[:path])
+              Domain::Shared::OutputDestination.file(path: output_destination[:path])
             else
-              Domain::RowRandomizationSession::RandomizationOutputDestination.console
+              Domain::Shared::OutputDestination.console
             end
           session = session.with_output_destination(destination)
 

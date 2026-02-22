@@ -4,7 +4,7 @@ require_relative "../../../test_helper"
 require "csvtool/domain/row_randomization_session/randomization_session"
 require "csvtool/domain/row_randomization_session/randomization_source"
 require "csvtool/domain/row_randomization_session/randomization_options"
-require "csvtool/domain/row_randomization_session/randomization_output_destination"
+require "csvtool/domain/shared/output_destination"
 
 class RandomizationSessionTest < Minitest::Test
   def test_with_output_destination_returns_updated_session
@@ -15,7 +15,7 @@ class RandomizationSessionTest < Minitest::Test
     )
     options = Csvtool::Domain::RowRandomizationSession::RandomizationOptions.new(seed: 7)
     session = Csvtool::Domain::RowRandomizationSession::RandomizationSession.start(source: source, options: options)
-    destination = Csvtool::Domain::RowRandomizationSession::RandomizationOutputDestination.console
+    destination = Csvtool::Domain::Shared::OutputDestination.console
 
     updated = session.with_output_destination(destination)
 

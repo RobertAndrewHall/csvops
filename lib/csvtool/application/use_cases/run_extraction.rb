@@ -19,8 +19,8 @@ require "csvtool/domain/column_session/column_selection"
 require "csvtool/domain/column_session/extraction_options"
 require "csvtool/domain/column_session/extraction_value"
 require "csvtool/domain/column_session/preview"
-require "csvtool/domain/column_session/output_destination"
 require "csvtool/domain/column_session/column_session"
+require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
@@ -79,9 +79,9 @@ module Csvtool
           return if output_destination.nil?
           domain_destination =
             if output_destination[:mode] == :file
-              Domain::ColumnSession::OutputDestination.file(path: output_destination[:path])
+              Domain::Shared::OutputDestination.file(path: output_destination[:path])
             else
-              Domain::ColumnSession::OutputDestination.console
+              Domain::Shared::OutputDestination.console
             end
           session = session.with_output_destination(domain_destination)
 
