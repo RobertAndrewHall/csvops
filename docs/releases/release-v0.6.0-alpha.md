@@ -50,7 +50,7 @@ Run quick checks for menu options `1-4` and confirm:
 
 ```bash
 gem build csvops.gemspec
-gem install ./csvops-0.6.0.alpha.gem
+gem install ./releases/gems/csvops-0.6.0.alpha.gem
 csvtool menu
 ```
 
@@ -71,7 +71,7 @@ git push origin main --tags
 ## 9. Publish gem
 
 ```bash
-gem push csvops-0.6.0.alpha.gem
+gem push releases/gems/csvops-0.6.0.alpha.gem
 ```
 
 ## 10. Create GitHub release

@@ -332,7 +332,7 @@ gem install csvops
 
 Release runbook:
 
-- `docs/release-v1.0.0.md`
+- `docs/releases/release-v1.0.0.md`
 
 
 ## Architecture

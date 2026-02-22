@@ -41,7 +41,7 @@ Cara
 
 ```bash
 gem build csvops.gemspec
-gem install ./csvops-0.1.0.alpha.gem
+gem install ./releases/gems/csvops-0.1.0.alpha.gem
 csvtool column test/fixtures/sample_people.csv name
 ```
 
@@ -62,7 +62,7 @@ git push origin main --tags
 ## 8. Publish gem (optional for alpha)
 
 ```bash
-gem push csvops-0.1.0.alpha.gem
+gem push releases/gems/csvops-0.1.0.alpha.gem
 ```
 
 ## 9. Create GitHub release

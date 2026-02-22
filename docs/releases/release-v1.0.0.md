@@ -1,4 +1,4 @@
-# Release Checklist: v0.9.0-alpha
+# Release Checklist: v1.0.0
 
 ## 1. Verify environment
 
@@ -46,7 +46,7 @@ Verify shared output behavior:
 
 ```bash
 gem build csvops.gemspec
-gem install ./csvops-0.9.0.alpha.gem
+gem install ./releases/gems/csvops-1.0.0.gem
 csvtool menu
 ```
 
@@ -54,27 +54,27 @@ csvtool menu
 
 ```bash
 git add -A
-git commit -m "chore(release): prepare v0.9.0-alpha"
+git commit -m "chore(release): prepare v1.0.0"
 ```
 
 ## 8. Tag release
 
 ```bash
-git tag -a v0.9.0-alpha -m "v0.9.0-alpha"
+git tag -a v1.0.0 -m "v1.0.0"
 git push origin main --tags
 ```
 
 ## 9. Publish gem
 
 ```bash
-gem push csvops-0.9.0.alpha.gem
+gem push releases/gems/csvops-1.0.0.gem
 ```
 
 ## 10. Create GitHub release
 
-Create release `v0.9.0-alpha` with:
+Create release `v1.0.0` with:
 - Shared output stream services across workflows (`stdout` data, `stderr` UI/errors)
 - Shared formatter services and migrated presenters
 - Shared color policy + colorizer across workflows
 - Shared width-aware table rendering across summary presenters
-- New output conventions documentation (`docs/cli-output-conventions.md`)
+- Output conventions documentation (`docs/cli-output-conventions.md`)

@@ -48,7 +48,7 @@ Use menu option `2` (`Extract rows (range)`), then verify:
 
 ```bash
 gem build csvops.gemspec
-gem install ./csvops-0.2.0.alpha.gem
+gem install ./releases/gems/csvops-0.2.0.alpha.gem
 csvtool menu
 ```
 
@@ -69,7 +69,7 @@ git push origin main --tags
 ## 9. Publish gem (optional for alpha)
 
 ```bash
-gem push csvops-0.2.0.alpha.gem
+gem push releases/gems/csvops-0.2.0.alpha.gem
 ```
 
 ## 10. Create GitHub release
