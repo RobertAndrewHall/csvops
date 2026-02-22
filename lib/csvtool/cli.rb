@@ -13,6 +13,11 @@ require "csvtool/interface/cli/errors/presenter"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
 require "csvtool/infrastructure/output/console_writer"
+require "csvtool/application/use_cases/run_csv_stats"
+require "csvtool/domain/csv_stats_session/stats_source"
+require "csvtool/domain/csv_stats_session/stats_options"
+require "csvtool/domain/csv_stats_session/stats_session"
+require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   class CLI
@@ -44,6 +49,8 @@ module Csvtool
         run_menu_loop
       when "column"
         run_column_command
+      when "stats"
+        run_stats_command
       else
         print_usage
         1
@@ -78,6 +85,7 @@ module Csvtool
       @stderr.puts "Usage:"
       @stderr.puts "  csvtool menu"
       @stderr.puts "  csvtool column <file> <column>"
+      @stderr.puts "  csvtool stats <file>"
     end
 
     def run_column_command
@@ -106,6 +114,48 @@ module Csvtool
     rescue Errno::EACCES
       errors.cannot_read_file(file_path)
       1
+    end
+
+    def run_stats_command
+      file_path = @argv[1]
+      unless file_path
+        print_usage
+        return 1
+      end
+
+      errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
+      source = Domain::CsvStatsSession::StatsSource.new(path: file_path, separator: ",", headers_present: true)
+      options = Domain::CsvStatsSession::StatsOptions.new
+      destination = Domain::Shared::OutputDestination.console
+      session = Domain::CsvStatsSession::StatsSession.start(source: source, options: options).with_output_destination(destination)
+      result = Application::UseCases::RunCsvStats.new.call(session: session)
+
+      unless result.ok?
+        case result.error
+        when :file_not_found
+          errors.file_not_found(result.data[:path])
+        when :could_not_parse_csv
+          errors.could_not_parse_csv
+        when :cannot_read_file
+          errors.cannot_read_file(result.data[:path])
+        else
+          @stderr.puts "Unknown error."
+        end
+        return 1
+      end
+
+      @stdout.puts "CSV Stats Summary"
+      @stdout.puts "Rows: #{result.data[:row_count]}"
+      @stdout.puts "Columns: #{result.data[:column_count]}"
+      @stdout.puts "Headers: #{result.data[:headers].join(', ')}" unless result.data[:headers].nil? || result.data[:headers].empty?
+      if result.data[:column_stats] && !result.data[:column_stats].empty?
+        @stdout.puts "Column completeness:"
+        result.data[:column_stats].each do |stats|
+          @stdout.puts "  #{stats[:name]}: non_blank=#{stats[:non_blank_count]} blank=#{stats[:blank_count]}"
+        end
+      end
+
+      0
     end
   end
 end

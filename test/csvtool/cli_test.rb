@@ -159,6 +159,41 @@ class TestCli < Minitest::Test
     assert_equal "Alice\nBob\nCara\n", output.string
   end
 
+  def test_stats_command_writes_summary_to_stdout_only
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv")],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 0, status
+    assert_includes stdout.string, "CSV Stats Summary"
+    assert_includes stdout.string, "Rows: 3"
+    assert_includes stdout.string, "Columns: 2"
+    assert_includes stdout.string, "Headers: name, city"
+    assert_equal "", stderr.string
+  end
+
+  def test_stats_command_writes_errors_to_stderr_only
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", "/tmp/not-there.csv"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 1, status
+    assert_equal "", stdout.string
+    assert_includes stderr.string, "File not found: /tmp/not-there.csv"
+  end
+
   def test_row_range_workflow_prints_selected_rows
     output = StringIO.new
     input = [
