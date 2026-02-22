@@ -28,7 +28,9 @@ class TestCli < Minitest::Test
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
 
     assert_equal 0, status
-    assert_includes output.string, "Stats workflow ready."
+    assert_includes output.string, "CSV Stats Summary"
+    assert_includes output.string, "Rows: 3"
+    assert_includes output.string, "Columns: 2"
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 

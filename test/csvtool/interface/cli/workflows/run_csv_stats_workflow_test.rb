@@ -4,16 +4,22 @@ require_relative "../../../../test_helper"
 require "csvtool/interface/cli/workflows/run_csv_stats_workflow"
 
 class RunCsvStatsWorkflowTest < Minitest::Test
-  def test_workflow_collects_source_path
+  def fixture_path(name)
+    File.expand_path("../../../../fixtures/#{name}", __dir__)
+  end
+
+  def test_workflow_prints_core_stats_summary
     out = StringIO.new
-    input = ["/tmp/data.csv"].join("\n") + "\n"
+    input = [fixture_path("sample_people.csv")].join("\n") + "\n"
 
     Csvtool::Interface::CLI::Workflows::RunCsvStatsWorkflow.new(
       stdin: StringIO.new(input),
       stdout: out
     ).call
 
-    assert_includes out.string, "CSV file path: "
-    assert_includes out.string, "Stats workflow ready."
+    assert_includes out.string, "CSV Stats Summary"
+    assert_includes out.string, "Rows: 3"
+    assert_includes out.string, "Columns: 2"
+    assert_includes out.string, "Headers: name, city"
   end
 end
