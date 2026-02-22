@@ -2,6 +2,7 @@
 
 require_relative "../test_helper"
 require "csvtool/cli"
+require "json"
 require "tmpdir"
 require "fileutils"
 
@@ -192,6 +193,61 @@ class TestCli < Minitest::Test
     assert_equal 1, status
     assert_equal "", stdout.string
     assert_includes stderr.string, "File not found: /tmp/not-there.csv"
+  end
+
+  def test_stats_command_supports_json_format
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--format", "json"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 0, status
+    data = JSON.parse(stdout.string, symbolize_names: true)
+    assert_equal 3, data[:row_count]
+    assert_equal 2, data[:column_count]
+    assert_equal ["name", "city"], data[:headers]
+    assert_equal "", stderr.string
+  end
+
+  def test_stats_command_supports_csv_format
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--format=csv"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 0, status
+    lines = stdout.string.lines.map(&:strip)
+    assert_equal "metric,value", lines[0]
+    assert_includes lines, "row_count,3"
+    assert_includes lines, "column_count,2"
+    assert_includes lines, "headers,name|city"
+    assert_equal "", stderr.string
+  end
+
+  def test_stats_command_rejects_unknown_format
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--format", "yaml"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 1, status
+    assert_equal "", stdout.string
+    assert_includes stderr.string, "Invalid format: yaml"
   end
 
   def test_row_range_workflow_prints_selected_rows

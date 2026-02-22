@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "csv"
+require "json"
 require "csvtool/interface/cli/menu_loop"
 require "csvtool/interface/cli/workflows/run_extraction_workflow"
 require "csvtool/interface/cli/workflows/run_row_extraction_workflow"
@@ -85,7 +86,7 @@ module Csvtool
       @stderr.puts "Usage:"
       @stderr.puts "  csvtool menu"
       @stderr.puts "  csvtool column <file> <column>"
-      @stderr.puts "  csvtool stats <file>"
+      @stderr.puts "  csvtool stats <file> [--format text|json|csv]"
     end
 
     def run_column_command
@@ -117,13 +118,17 @@ module Csvtool
     end
 
     def run_stats_command
-      file_path = @argv[1]
+      file_path, format = parse_stats_args(@argv[1..])
       unless file_path
         print_usage
         return 1
       end
 
       errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
+      unless %w[text json csv].include?(format)
+        @stderr.puts "Invalid format: #{format}"
+        return 1
+      end
       source = Domain::CsvStatsSession::StatsSource.new(path: file_path, separator: ",", headers_present: true)
       options = Domain::CsvStatsSession::StatsOptions.new
       destination = Domain::Shared::OutputDestination.console
@@ -144,18 +149,53 @@ module Csvtool
         return 1
       end
 
-      @stdout.puts "CSV Stats Summary"
-      @stdout.puts "Rows: #{result.data[:row_count]}"
-      @stdout.puts "Columns: #{result.data[:column_count]}"
-      @stdout.puts "Headers: #{result.data[:headers].join(', ')}" unless result.data[:headers].nil? || result.data[:headers].empty?
-      if result.data[:column_stats] && !result.data[:column_stats].empty?
-        @stdout.puts "Column completeness:"
-        result.data[:column_stats].each do |stats|
-          @stdout.puts "  #{stats[:name]}: non_blank=#{stats[:non_blank_count]} blank=#{stats[:blank_count]}"
-        end
-      end
+      print_stats(result.data, format: format)
 
       0
+    end
+
+    def parse_stats_args(args)
+      file_path = args[0]
+      format = "text"
+      index = 1
+      while index < args.length
+        arg = args[index]
+        if arg.start_with?("--format=")
+          format = arg.split("=", 2)[1]
+        elsif arg == "--format"
+          format = args[index + 1].to_s
+          index += 1
+        end
+        index += 1
+      end
+      [file_path, format]
+    end
+
+    def print_stats(data, format:)
+      case format
+      when "json"
+        @stdout.puts JSON.generate(data)
+      when "csv"
+        @stdout.puts "metric,value"
+        @stdout.puts "row_count,#{data[:row_count]}"
+        @stdout.puts "column_count,#{data[:column_count]}"
+        @stdout.puts "headers,#{data[:headers].join('|')}" unless data[:headers].nil? || data[:headers].empty?
+        data.fetch(:column_stats, []).each do |stats|
+          @stdout.puts "column.#{stats[:name]}.non_blank,#{stats[:non_blank_count]}"
+          @stdout.puts "column.#{stats[:name]}.blank,#{stats[:blank_count]}"
+        end
+      else
+        @stdout.puts "CSV Stats Summary"
+        @stdout.puts "Rows: #{data[:row_count]}"
+        @stdout.puts "Columns: #{data[:column_count]}"
+        @stdout.puts "Headers: #{data[:headers].join(', ')}" unless data[:headers].nil? || data[:headers].empty?
+        if data[:column_stats] && !data[:column_stats].empty?
+          @stdout.puts "Column completeness:"
+          data[:column_stats].each do |stats|
+            @stdout.puts "  #{stats[:name]}: non_blank=#{stats[:non_blank_count]} blank=#{stats[:blank_count]}"
+          end
+        end
+      end
     end
   end
 end
