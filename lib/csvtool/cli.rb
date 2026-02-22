@@ -8,6 +8,7 @@ require "csvtool/interface/cli/workflows/run_row_randomization_workflow"
 require "csvtool/interface/cli/workflows/run_cross_csv_dedupe_workflow"
 require "csvtool/interface/cli/workflows/run_csv_parity_workflow"
 require "csvtool/interface/cli/workflows/run_csv_split_workflow"
+require "csvtool/interface/cli/workflows/run_csv_stats_workflow"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/value_streamer"
@@ -22,6 +23,7 @@ module Csvtool
       "Dedupe using another CSV",
       "Validate parity",
       "Split CSV into chunks",
+      "CSV stats summary",
       "Exit"
     ].freeze
 
@@ -57,6 +59,7 @@ module Csvtool
       dedupe_action = -> { Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow.new(stdin: @stdin, stdout: @stdout).call }
       parity_action = -> { Interface::CLI::Workflows::RunCsvParityWorkflow.new(stdin: @stdin, stdout: @stdout).call }
       split_action = -> { Interface::CLI::Workflows::RunCsvSplitWorkflow.new(stdin: @stdin, stdout: @stdout).call }
+      stats_action = -> { Interface::CLI::Workflows::RunCsvStatsWorkflow.new(stdin: @stdin, stdout: @stdout).call }
       Interface::CLI::MenuLoop.new(
         stdin: @stdin,
         stdout: @stdout,
@@ -66,7 +69,8 @@ module Csvtool
         randomize_rows_action: randomize_rows_action,
         dedupe_action: dedupe_action,
         parity_action: parity_action,
-        split_action: split_action
+        split_action: split_action,
+        stats_action: stats_action
       ).run
     end
 
