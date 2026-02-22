@@ -250,6 +250,102 @@ class TestCli < Minitest::Test
     assert_includes stderr.string, "Invalid format: yaml"
   end
 
+  def test_stats_command_color_auto_without_tty_has_no_ansi
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--color", "auto"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 0, status
+    refute_match(/\e\[[0-9;]*m/, stdout.string)
+    assert_equal "", stderr.string
+  end
+
+  def test_stats_command_color_always_adds_ansi
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--color=always"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 0, status
+    assert_match(/\e\[[0-9;]*m/, stdout.string)
+    assert_equal "", stderr.string
+  end
+
+  def test_stats_command_color_never_disables_ansi
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--color", "never"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 0, status
+    refute_match(/\e\[[0-9;]*m/, stdout.string)
+    assert_equal "", stderr.string
+  end
+
+  def test_stats_command_no_color_env_disables_auto
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--color", "auto"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr,
+      env: { "NO_COLOR" => "1" }
+    )
+
+    assert_equal 0, status
+    refute_match(/\e\[[0-9;]*m/, stdout.string)
+  end
+
+  def test_stats_command_color_always_overrides_no_color_env
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--color", "always"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr,
+      env: { "NO_COLOR" => "1" }
+    )
+
+    assert_equal 0, status
+    assert_match(/\e\[[0-9;]*m/, stdout.string)
+  end
+
+  def test_stats_command_rejects_unknown_color_mode
+    stdout = StringIO.new
+    stderr = StringIO.new
+
+    status = Csvtool::CLI.start(
+      ["stats", fixture_path("sample_people.csv"), "--color", "sometimes"],
+      stdin: StringIO.new,
+      stdout: stdout,
+      stderr: stderr
+    )
+
+    assert_equal 1, status
+    assert_equal "", stdout.string
+    assert_includes stderr.string, "Invalid color mode: sometimes"
+  end
+
   def test_row_range_workflow_prints_selected_rows
     output = StringIO.new
     input = [

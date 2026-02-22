@@ -33,15 +33,16 @@ module Csvtool
       "Exit"
     ].freeze
 
-    def self.start(argv, stdin:, stdout:, stderr:)
-      new(argv, stdin: stdin, stdout: stdout, stderr: stderr).run
+    def self.start(argv, stdin:, stdout:, stderr:, env: ENV)
+      new(argv, stdin: stdin, stdout: stdout, stderr: stderr, env: env).run
     end
 
-    def initialize(argv, stdin:, stdout:, stderr:)
+    def initialize(argv, stdin:, stdout:, stderr:, env: ENV)
       @argv = argv
       @stdin = stdin
       @stdout = stdout
       @stderr = stderr
+      @env = env
     end
 
     def run
@@ -86,7 +87,7 @@ module Csvtool
       @stderr.puts "Usage:"
       @stderr.puts "  csvtool menu"
       @stderr.puts "  csvtool column <file> <column>"
-      @stderr.puts "  csvtool stats <file> [--format text|json|csv]"
+      @stderr.puts "  csvtool stats <file> [--format text|json|csv] [--color auto|always|never]"
     end
 
     def run_column_command
@@ -118,7 +119,7 @@ module Csvtool
     end
 
     def run_stats_command
-      file_path, format = parse_stats_args(@argv[1..])
+      file_path, format, color_mode = parse_stats_args(@argv[1..])
       unless file_path
         print_usage
         return 1
@@ -127,6 +128,10 @@ module Csvtool
       errors = Interface::CLI::Errors::Presenter.new(stdout: @stderr)
       unless %w[text json csv].include?(format)
         @stderr.puts "Invalid format: #{format}"
+        return 1
+      end
+      unless %w[auto always never].include?(color_mode)
+        @stderr.puts "Invalid color mode: #{color_mode}"
         return 1
       end
       source = Domain::CsvStatsSession::StatsSource.new(path: file_path, separator: ",", headers_present: true)
@@ -149,7 +154,7 @@ module Csvtool
         return 1
       end
 
-      print_stats(result.data, format: format)
+      print_stats(result.data, format: format, color_mode: color_mode)
 
       0
     end
@@ -157,6 +162,7 @@ module Csvtool
     def parse_stats_args(args)
       file_path = args[0]
       format = "text"
+      color_mode = "auto"
       index = 1
       while index < args.length
         arg = args[index]
@@ -165,13 +171,18 @@ module Csvtool
         elsif arg == "--format"
           format = args[index + 1].to_s
           index += 1
+        elsif arg.start_with?("--color=")
+          color_mode = arg.split("=", 2)[1]
+        elsif arg == "--color"
+          color_mode = args[index + 1].to_s
+          index += 1
         end
         index += 1
       end
-      [file_path, format]
+      [file_path, format, color_mode]
     end
 
-    def print_stats(data, format:)
+    def print_stats(data, format:, color_mode:)
       case format
       when "json"
         @stdout.puts JSON.generate(data)
@@ -185,17 +196,32 @@ module Csvtool
           @stdout.puts "column.#{stats[:name]}.blank,#{stats[:blank_count]}"
         end
       else
-        @stdout.puts "CSV Stats Summary"
-        @stdout.puts "Rows: #{data[:row_count]}"
-        @stdout.puts "Columns: #{data[:column_count]}"
-        @stdout.puts "Headers: #{data[:headers].join(', ')}" unless data[:headers].nil? || data[:headers].empty?
+        use_color = color_enabled?(color_mode)
+        @stdout.puts colorize("CSV Stats Summary", code: "1;36", enabled: use_color)
+        @stdout.puts "#{colorize('Rows', code: '1', enabled: use_color)}: #{data[:row_count]}"
+        @stdout.puts "#{colorize('Columns', code: '1', enabled: use_color)}: #{data[:column_count]}"
+        @stdout.puts "#{colorize('Headers', code: '1', enabled: use_color)}: #{data[:headers].join(', ')}" unless data[:headers].nil? || data[:headers].empty?
         if data[:column_stats] && !data[:column_stats].empty?
-          @stdout.puts "Column completeness:"
+          @stdout.puts colorize("Column completeness:", code: "1", enabled: use_color)
           data[:column_stats].each do |stats|
             @stdout.puts "  #{stats[:name]}: non_blank=#{stats[:non_blank_count]} blank=#{stats[:blank_count]}"
           end
         end
       end
+    end
+
+    def color_enabled?(mode)
+      return true if mode == "always"
+      return false if mode == "never"
+      return false if @env["NO_COLOR"]
+
+      @stdout.respond_to?(:tty?) && @stdout.tty?
+    end
+
+    def colorize(text, code:, enabled:)
+      return text unless enabled
+
+      "\e[#{code}m#{text}\e[0m"
     end
   end
 end
