@@ -22,8 +22,9 @@ module Csvtool
           @csv_splitter = csv_splitter
         end
 
-        def read_headers(file_path:, col_sep:)
+        def read_headers(file_path:, col_sep:, headers_present:)
           return failure(:file_not_found, path: file_path) unless File.file?(file_path)
+          return success(headers: nil) unless headers_present
 
           headers = @header_reader.call(file_path: file_path, col_sep: col_sep)
           return failure(:no_headers) if headers.empty?

@@ -10,7 +10,8 @@ module Csvtool
               def call(context)
                 headers_result = context.fetch(:use_case).read_headers(
                   file_path: context.fetch(:file_path),
-                  col_sep: ","
+                  col_sep: context.fetch(:col_sep),
+                  headers_present: context.fetch(:headers_present)
                 )
                 unless headers_result.ok?
                   context.fetch(:handle_error).call(headers_result)

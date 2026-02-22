@@ -25,6 +25,8 @@ class TestCli < Minitest::Test
       input = [
         "6",
         source_path,
+        "",
+        "",
         "10",
         "7"
       ].join("\n") + "\n"

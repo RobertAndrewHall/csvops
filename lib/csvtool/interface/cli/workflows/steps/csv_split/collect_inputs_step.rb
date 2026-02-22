@@ -7,13 +7,20 @@ module Csvtool
         module Steps
           module CsvSplit
             class CollectInputsStep
-              def initialize(file_path_prompt:, chunk_size_prompt:)
+              def initialize(file_path_prompt:, separator_prompt:, headers_present_prompt:, chunk_size_prompt:)
                 @file_path_prompt = file_path_prompt
+                @separator_prompt = separator_prompt
+                @headers_present_prompt = headers_present_prompt
                 @chunk_size_prompt = chunk_size_prompt
               end
 
               def call(context)
                 context[:file_path] = @file_path_prompt.call(label: "Source CSV file path: ")
+                col_sep = @separator_prompt.call
+                return :halt if col_sep.nil?
+
+                context[:col_sep] = col_sep
+                context[:headers_present] = @headers_present_prompt.call
                 context[:chunk_size] = Integer(@chunk_size_prompt.call)
                 nil
               end

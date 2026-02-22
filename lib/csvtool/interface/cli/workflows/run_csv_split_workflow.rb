@@ -3,6 +3,8 @@
 require "csvtool/application/use_cases/run_csv_split"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/prompts/chunk_size_prompt"
 require "csvtool/interface/cli/workflows/builders/csv_split_session_builder"
 require "csvtool/interface/cli/workflows/presenters/csv_split_presenter"
@@ -37,6 +39,8 @@ module Csvtool
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::CsvSplit::CollectInputsStep.new(
                 file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
                 chunk_size_prompt: Interface::CLI::Prompts::ChunkSizePrompt.new(stdin: @stdin, stdout: @stdout)
               ),
               Steps::CsvSplit::BuildSessionStep.new,
