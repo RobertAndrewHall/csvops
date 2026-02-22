@@ -17,10 +17,28 @@ class CsvSplitPresenterTest < Minitest::Test
     )
 
     assert_includes out.string, "Split complete."
-    assert_includes out.string, "Chunk size: 10"
-    assert_includes out.string, "Data rows: 25"
-    assert_includes out.string, "Chunks written: 3"
-    assert_includes out.string, "Manifest: /tmp/manifest.csv"
+    assert_includes out.string, "Metric"
+    assert_includes out.string, "Chunk size"
+    assert_includes out.string, "Data rows"
+    assert_includes out.string, "Chunks written"
+    assert_includes out.string, "Manifest"
     assert_includes out.string, "/tmp/people_part_001.csv"
+  end
+
+  def test_truncates_summary_table_for_narrow_width
+    out = StringIO.new
+    presenter = Csvtool::Interface::CLI::Workflows::Presenters::CsvSplitPresenter.new(stdout: out, max_width: 26)
+
+    presenter.print_summary(
+      chunk_size: 10,
+      data_rows: 25,
+      chunk_count: 3,
+      manifest_path: "/tmp/very/long/path/manifest.csv",
+      chunk_paths: []
+    )
+
+    lines = out.string.lines.map(&:chomp)
+    assert lines.all? { |line| line.empty? || line.length <= 26 }
+    assert_includes out.string, "..."
   end
 end

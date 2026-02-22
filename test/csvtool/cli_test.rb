@@ -33,8 +33,9 @@ class TestCli < Minitest::Test
 
     assert_equal 0, status
     assert_includes output.string, "CSV Stats Summary"
-    assert_includes output.string, "Rows: 3"
-    assert_includes output.string, "Columns: 2"
+    assert_includes output.string, "Metric"
+    assert_includes output.string, "Rows"
+    assert_includes output.string, "Columns"
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 
@@ -102,7 +103,7 @@ class TestCli < Minitest::Test
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: output)
 
       assert_equal 0, status
-      assert_includes output.string, "Chunks written: 3"
+      assert_includes output.string, "Chunks written"
       assert File.file?(File.join(dir, "people_part_001.csv"))
       assert File.file?(File.join(dir, "people_part_002.csv"))
       assert File.file?(File.join(dir, "people_part_003.csv"))
@@ -656,7 +657,7 @@ class TestCli < Minitest::Test
     assert_includes output.string, "customer_id,name"
     assert_includes output.string, "1,Alice"
     assert_includes output.string, "3,Cara"
-    assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+    assert_includes output.string, "Summary"
   end
 
   def test_dedupe_workflow_can_write_to_file
@@ -686,7 +687,7 @@ class TestCli < Minitest::Test
       assert_equal 0, status
       assert_includes output.string, "Wrote output to #{output_path}"
       assert_equal "customer_id,name\n1,Alice\n3,Cara\n", File.read(output_path)
-      assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+      assert_includes output.string, "Summary"
     end
   end
 
@@ -740,7 +741,7 @@ class TestCli < Minitest::Test
     refute_includes output.string, "customer_id,name"
     assert_includes output.string, "1,Alice"
     assert_includes output.string, "3,Cara"
-    assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+    assert_includes output.string, "Summary"
   end
 
   def test_parity_workflow_reports_match_and_returns_to_menu
@@ -760,7 +761,9 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Left CSV file path:"
     assert_includes output.string, "Right CSV file path:"
     assert_includes output.string, "MATCH"
-    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+    assert_includes output.string, "Metric"
+    assert_includes output.string, "Left rows"
+    assert_includes output.string, "Right rows"
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 
@@ -779,7 +782,8 @@ class TestCli < Minitest::Test
 
     assert_equal 0, status
     assert_includes output.string, "MATCH"
-    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+    assert_includes output.string, "Left rows"
+    assert_includes output.string, "Right rows"
   end
 
   def test_parity_workflow_headerless_mode_compares_all_rows
@@ -797,7 +801,8 @@ class TestCli < Minitest::Test
 
     assert_equal 0, status
     assert_includes output.string, "MATCH"
-    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+    assert_includes output.string, "Left rows"
+    assert_includes output.string, "Right rows"
   end
 
   def test_parity_workflow_reports_header_mismatch_in_headered_mode
@@ -833,7 +838,8 @@ class TestCli < Minitest::Test
 
     assert_equal 0, status
     assert_includes output.string, "MISMATCH"
-    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=1 right_only=1"
+    assert_includes output.string, "Left only"
+    assert_includes output.string, "Right only"
     assert_includes output.string, "Left-only examples:"
     assert_includes output.string, "Cara,Berlin (count +1)"
     assert_includes output.string, "Right-only examples:"

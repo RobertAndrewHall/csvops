@@ -17,7 +17,11 @@ class CsvParityPresenterTest < Minitest::Test
     )
 
     assert_includes out.string, "MATCH"
-    assert_includes out.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+    assert_includes out.string, "Metric"
+    assert_includes out.string, "Left rows"
+    assert_includes out.string, "Right rows"
+    assert_includes out.string, "Left only"
+    assert_includes out.string, "Right only"
   end
 
   def test_prints_mismatch_examples

@@ -14,7 +14,10 @@ class CrossCsvDedupePresenterTest < Minitest::Test
 
     assert_includes out.string, "\nid,name\n"
     assert_includes out.string, "1,Alice"
-    assert_includes out.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+    assert_includes out.string, "Summary"
+    assert_includes out.string, "Source rows"
+    assert_includes out.string, "Removed rows"
+    assert_includes out.string, "Kept rows"
   end
 
   def test_prints_zero_and_all_removed_messages

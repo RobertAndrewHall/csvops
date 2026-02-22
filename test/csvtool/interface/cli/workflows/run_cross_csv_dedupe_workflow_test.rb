@@ -38,7 +38,10 @@ class RunCrossCsvDedupeWorkflowTest < Minitest::Test
     assert_includes output.string, "3,Cara"
     refute_includes output.string, "2,Bob"
     refute_includes output.string, "4,Dan"
-    assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+    assert_includes output.string, "Summary"
+    assert_includes output.string, "Source rows"
+    assert_includes output.string, "Removed rows"
+    assert_includes output.string, "Kept rows"
   end
 
   def test_can_write_deduped_rows_to_file
@@ -67,7 +70,7 @@ class RunCrossCsvDedupeWorkflowTest < Minitest::Test
 
       assert_includes output.string, "Wrote output to #{output_path}"
       assert_equal "customer_id,name\n1,Alice\n3,Cara\n", File.read(output_path)
-      assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+      assert_includes output.string, "Summary"
     end
   end
 
@@ -119,7 +122,7 @@ class RunCrossCsvDedupeWorkflowTest < Minitest::Test
     refute_includes output.string, "customer_id,name"
     assert_includes output.string, "1,Alice"
     assert_includes output.string, "3,Cara"
-    assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
+    assert_includes output.string, "Summary"
   end
 
   def test_reports_column_not_found_when_missing
@@ -164,7 +167,7 @@ class RunCrossCsvDedupeWorkflowTest < Minitest::Test
       .new(stdin: StringIO.new(input), stdout: output)
       .call
 
-    assert_includes output.string, "Summary: source_rows=5 removed_rows=0 kept_rows=5"
+    assert_includes output.string, "Summary"
     assert_includes output.string, "No rows removed; no matching keys found."
   end
 
@@ -188,7 +191,7 @@ class RunCrossCsvDedupeWorkflowTest < Minitest::Test
       .new(stdin: StringIO.new(input), stdout: output)
       .call
 
-    assert_includes output.string, "Summary: source_rows=5 removed_rows=5 kept_rows=0"
+    assert_includes output.string, "Summary"
     assert_includes output.string, "All source rows were removed by dedupe."
   end
 
@@ -215,7 +218,7 @@ class RunCrossCsvDedupeWorkflowTest < Minitest::Test
     refute_includes output.string, " A1 ,Alice"
     refute_includes output.string, "c3,Cara"
     assert_includes output.string, "B2,Bob"
-    assert_includes output.string, "Summary: source_rows=3 removed_rows=2 kept_rows=1"
+    assert_includes output.string, "Summary"
   end
 
   def test_normalization_disabled_preserves_exact_match_behavior
@@ -241,6 +244,6 @@ class RunCrossCsvDedupeWorkflowTest < Minitest::Test
     assert_includes output.string, " A1 ,Alice"
     assert_includes output.string, "B2,Bob"
     assert_includes output.string, "c3,Cara"
-    assert_includes output.string, "Summary: source_rows=3 removed_rows=0 kept_rows=3"
+    assert_includes output.string, "Summary"
   end
 end

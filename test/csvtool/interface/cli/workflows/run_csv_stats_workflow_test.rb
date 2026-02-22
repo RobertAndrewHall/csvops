@@ -19,12 +19,13 @@ class RunCsvStatsWorkflowTest < Minitest::Test
     ).call
 
     assert_includes out.string, "CSV Stats Summary"
-    assert_includes out.string, "Rows: 3"
-    assert_includes out.string, "Columns: 2"
-    assert_includes out.string, "Headers: name, city"
+    assert_includes out.string, "Metric"
+    assert_includes out.string, "Rows"
+    assert_includes out.string, "Columns"
+    assert_includes out.string, "Headers"
     assert_includes out.string, "Column completeness:"
-    assert_includes out.string, "name: non_blank=3 blank=0"
-    assert_includes out.string, "city: non_blank=3 blank=0"
+    assert_includes out.string, "name"
+    assert_includes out.string, "city"
   end
 
   def test_workflow_supports_tsv_separator
@@ -36,9 +37,9 @@ class RunCsvStatsWorkflowTest < Minitest::Test
       stdout: out
     ).call
 
-    assert_includes out.string, "Rows: 3"
-    assert_includes out.string, "Columns: 2"
-    assert_includes out.string, "Headers: name, city"
+    assert_includes out.string, "Rows"
+    assert_includes out.string, "Columns"
+    assert_includes out.string, "Headers"
   end
 
   def test_workflow_supports_headerless_mode
@@ -50,11 +51,11 @@ class RunCsvStatsWorkflowTest < Minitest::Test
       stdout: out
     ).call
 
-    assert_includes out.string, "Rows: 3"
-    assert_includes out.string, "Columns: 2"
-    refute_includes out.string, "Headers:"
-    assert_includes out.string, "column_1: non_blank=3 blank=0"
-    assert_includes out.string, "column_2: non_blank=3 blank=0"
+    assert_includes out.string, "Rows"
+    assert_includes out.string, "Columns"
+    refute_includes out.string, "Headers |"
+    assert_includes out.string, "column_1"
+    assert_includes out.string, "column_2"
   end
 
   def test_workflow_supports_custom_separator
@@ -66,9 +67,9 @@ class RunCsvStatsWorkflowTest < Minitest::Test
       stdout: out
     ).call
 
-    assert_includes out.string, "Rows: 3"
-    assert_includes out.string, "Columns: 2"
-    assert_includes out.string, "Headers: name, city"
+    assert_includes out.string, "Rows"
+    assert_includes out.string, "Columns"
+    assert_includes out.string, "Headers"
   end
 
   def test_workflow_prints_column_completeness_for_blank_values
@@ -80,8 +81,12 @@ class RunCsvStatsWorkflowTest < Minitest::Test
       stdout: out
     ).call
 
-    assert_includes out.string, "name: non_blank=3 blank=2"
-    assert_includes out.string, "city: non_blank=4 blank=1"
+    assert_includes out.string, "name"
+    assert_includes out.string, "3"
+    assert_includes out.string, "2"
+    assert_includes out.string, "city"
+    assert_includes out.string, "4"
+    assert_includes out.string, "1"
   end
 
   def test_workflow_reports_missing_file

@@ -19,11 +19,13 @@ class CsvStatsPresenterTest < Minitest::Test
     )
 
     assert_includes out.string, "CSV Stats Summary"
-    assert_includes out.string, "Rows: 3"
-    assert_includes out.string, "Columns: 2"
-    assert_includes out.string, "Headers: name, city"
-    assert_includes out.string, "name: non_blank=3 blank=0"
-    assert_includes out.string, "city: non_blank=2 blank=1"
+    assert_includes out.string, "Metric"
+    assert_includes out.string, "Rows"
+    assert_includes out.string, "Columns"
+    assert_includes out.string, "Headers"
+    assert_includes out.string, "Column completeness:"
+    assert_includes out.string, "name"
+    assert_includes out.string, "city"
   end
 
   def test_prints_file_written_message

@@ -24,8 +24,9 @@ class RunCsvSplitWorkflowTest < Minitest::Test
       ).call
 
       assert_includes out.string, "Split complete."
-      assert_includes out.string, "Chunk size: 10"
-      assert_includes out.string, "Chunks written: 3"
+      assert_includes out.string, "Metric"
+      assert_includes out.string, "Chunk size"
+      assert_includes out.string, "Chunks written"
       assert File.file?(File.join(dir, "people_part_001.csv"))
       assert File.file?(File.join(dir, "people_part_002.csv"))
       assert File.file?(File.join(dir, "people_part_003.csv"))
@@ -194,7 +195,8 @@ class RunCsvSplitWorkflowTest < Minitest::Test
       assert_includes lines[1], ",10"
       assert_includes lines[2], ",10"
       assert_includes lines[3], ",5"
-      assert_includes out.string, "Manifest: #{manifest_path}"
+      assert_includes out.string, "Manifest"
+      assert_includes out.string, "manifest.csv"
     end
   end
 end

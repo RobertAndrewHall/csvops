@@ -62,7 +62,9 @@ class RunCsvParityWorkflowTest < Minitest::Test
     assert_includes stdout.string, "Choose separator:"
     assert_includes stdout.string, "Headers present? [Y/n]: "
     assert_includes stdout.string, "MATCH"
-    assert_includes stdout.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
+    assert_includes stdout.string, "Metric"
+    assert_includes stdout.string, "Left rows"
+    assert_includes stdout.string, "Right rows"
   end
 
   def test_prints_mismatch_examples_when_not_equal
