@@ -16,7 +16,7 @@ class CliUnitTest < Minitest::Test
   end
 
   def test_menu_command_can_exit_zero
-    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("5\n"), stdout: StringIO.new, stderr: StringIO.new)
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new("6\n"), stdout: StringIO.new, stderr: StringIO.new)
     assert_equal 0, status
   end
 
@@ -28,7 +28,7 @@ class CliUnitTest < Minitest::Test
   def test_menu_routes_to_row_range_shell
     stdout = StringIO.new
     fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    input = ["2", fixture, "", "2", "3", "", "5"].join("\n") + "\n"
+    input = ["2", fixture, "", "2", "3", "", "6"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "name,city"
@@ -39,7 +39,7 @@ class CliUnitTest < Minitest::Test
   def test_menu_routes_to_randomize_rows_shell
     stdout = StringIO.new
     fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    input = ["3", fixture, "", "", "", "", "5"].join("\n") + "\n"
+    input = ["3", fixture, "", "", "", "", "6"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "name,city"
@@ -52,7 +52,7 @@ class CliUnitTest < Minitest::Test
     stdout = StringIO.new
     source_fixture = File.expand_path("../fixtures/dedupe_source.csv", __dir__)
     reference_fixture = File.expand_path("../fixtures/dedupe_reference.csv", __dir__)
-    input = ["4", source_fixture, "", "", reference_fixture, "", "", "customer_id", "external_id", "", "", "", "5"].join("\n") + "\n"
+    input = ["4", source_fixture, "", "", reference_fixture, "", "", "customer_id", "external_id", "", "", "", "6"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
     assert_includes stdout.string, "customer_id,name"

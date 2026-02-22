@@ -5,6 +5,7 @@ require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 require "csvtool/interface/cli/prompts/separator_prompt"
 require "csvtool/interface/cli/prompts/headers_present_prompt"
+require "csvtool/interface/cli/workflows/builders/csv_parity_session_builder"
 
 module Csvtool
   module Interface
@@ -16,6 +17,7 @@ module Csvtool
             @stdout = stdout
             @use_case = use_case
             @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+            @session_builder = Builders::CsvParitySessionBuilder.new
           end
 
           def call
@@ -28,12 +30,13 @@ module Csvtool
 
             headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout).call
 
-            result = @use_case.call(
+            session = @session_builder.call(
               left_path: left_path,
               right_path: right_path,
               col_sep: col_sep,
               headers_present: headers_present
             )
+            result = @use_case.call(session: session)
             return handle_error(result) unless result.ok?
 
             print_summary(result.data)

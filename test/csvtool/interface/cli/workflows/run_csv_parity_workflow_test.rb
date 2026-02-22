@@ -11,8 +11,8 @@ class RunCsvParityWorkflowTest < Minitest::Test
       @calls = []
     end
 
-    def call(left_path:, right_path:, col_sep:, headers_present:)
-      @calls << { left_path: left_path, right_path: right_path, col_sep: col_sep, headers_present: headers_present }
+    def call(session:)
+      @calls << session
       Struct.new(:ok?, :data).new(true, {
         match: true,
         left_rows: 3,
@@ -24,7 +24,7 @@ class RunCsvParityWorkflowTest < Minitest::Test
   end
 
   class MismatchUseCase
-    def call(left_path:, right_path:, col_sep:, headers_present:)
+    def call(session:)
       Struct.new(:ok?, :data).new(true, {
         match: false,
         left_rows: 3,
@@ -38,7 +38,7 @@ class RunCsvParityWorkflowTest < Minitest::Test
   end
 
   class CannotReadUseCase
-    def call(left_path:, right_path:, col_sep:, headers_present:)
+    def call(session:)
       Struct.new(:ok?, :error, :data).new(false, :cannot_read_file, { path: "/tmp/protected.csv" })
     end
   end
@@ -52,7 +52,11 @@ class RunCsvParityWorkflowTest < Minitest::Test
       .new(stdin: input, stdout: stdout, use_case: use_case)
       .call
 
-    assert_equal [{ left_path: "/tmp/left.csv", right_path: "/tmp/right.csv", col_sep: "\t", headers_present: true }], use_case.calls
+    call = use_case.calls.first
+    assert_equal "/tmp/left.csv", call.source_pair.left_path
+    assert_equal "/tmp/right.csv", call.source_pair.right_path
+    assert_equal "\t", call.options.separator
+    assert_equal true, call.options.headers_present?
     assert_includes stdout.string, "Left CSV file path: "
     assert_includes stdout.string, "Right CSV file path: "
     assert_includes stdout.string, "Choose separator:"

@@ -22,7 +22,12 @@ module Csvtool
           @header_reader = header_reader
         end
 
-        def call(left_path:, right_path:, col_sep: ",", headers_present: true)
+        def call(session:)
+          left_path = session.source_pair.left_path
+          right_path = session.source_pair.right_path
+          col_sep = session.options.separator
+          headers_present = session.options.headers_present?
+
           return failure(:file_not_found, path: left_path) unless File.file?(left_path)
           return failure(:file_not_found, path: right_path) unless File.file?(right_path)
 
