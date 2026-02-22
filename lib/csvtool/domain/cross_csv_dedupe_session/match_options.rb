@@ -18,6 +18,11 @@ module Csvtool
         def case_insensitive?
           @case_insensitive
         end
+
+        def normalize(value)
+          normalized = trim_whitespace? ? value.to_s.strip : value.to_s
+          case_insensitive? ? normalized.downcase : normalized
+        end
       end
     end
   end

@@ -2,6 +2,7 @@
 
 require "csv"
 require "set"
+require "csvtool/domain/cross_csv_dedupe_session/match_options"
 
 module Csvtool
   module Infrastructure
@@ -14,10 +15,7 @@ module Csvtool
           reference_selector:,
           source_col_sep: ",",
           reference_col_sep: ",",
-          source_has_headers: true,
-          reference_has_headers: true,
-          trim_whitespace: true,
-          case_insensitive: false
+          match_options: Domain::CrossCsvDedupeSession::MatchOptions.new(trim_whitespace: true, case_insensitive: false)
         )
           kept_rows = []
           stats = each_retained(
@@ -27,10 +25,7 @@ module Csvtool
             reference_selector: reference_selector,
             source_col_sep: source_col_sep,
             reference_col_sep: reference_col_sep,
-            source_has_headers: source_has_headers,
-            reference_has_headers: reference_has_headers,
-            trim_whitespace: trim_whitespace,
-            case_insensitive: case_insensitive
+            match_options: match_options
           ) do |fields|
             kept_rows << fields
           end
@@ -45,20 +40,13 @@ module Csvtool
           reference_selector:,
           source_col_sep: ",",
           reference_col_sep: ",",
-          source_has_headers: true,
-          reference_has_headers: true,
-          trim_whitespace: true,
-          case_insensitive: false
+          match_options: Domain::CrossCsvDedupeSession::MatchOptions.new(trim_whitespace: true, case_insensitive: false)
         )
+          source_has_headers = source_selector.headers_present?
+          reference_has_headers = reference_selector.headers_present?
           reference_keys = Set.new
           ::CSV.foreach(reference_path, headers: reference_has_headers, col_sep: reference_col_sep) do |row|
-            reference_keys << extract_key(
-              row,
-              selector: reference_selector,
-              headers: reference_has_headers,
-              trim_whitespace: trim_whitespace,
-              case_insensitive: case_insensitive
-            )
+            reference_keys << extract_key(row, selector: reference_selector, match_options: match_options)
           end
 
           source_header_row = nil
@@ -69,13 +57,7 @@ module Csvtool
           ::CSV.foreach(source_path, headers: source_has_headers, col_sep: source_col_sep) do |row|
             source_header_row ||= row.headers if source_has_headers
             source_rows += 1
-            key = extract_key(
-              row,
-              selector: source_selector,
-              headers: source_has_headers,
-              trim_whitespace: trim_whitespace,
-              case_insensitive: case_insensitive
-            )
+            key = extract_key(row, selector: source_selector, match_options: match_options)
             if reference_keys.include?(key)
               removed_rows += 1
             else
@@ -94,19 +76,8 @@ module Csvtool
 
         private
 
-        def extract_key(row, selector:, headers:, trim_whitespace:, case_insensitive:)
-          raw_key = if headers
-                      row[selector].to_s
-                    else
-                      row[selector - 1].to_s
-                    end
-
-          normalize_key(raw_key, trim_whitespace: trim_whitespace, case_insensitive: case_insensitive)
-        end
-
-        def normalize_key(key, trim_whitespace:, case_insensitive:)
-          value = trim_whitespace ? key.strip : key
-          case_insensitive ? value.downcase : value
+        def extract_key(row, selector:, match_options:)
+          match_options.normalize(selector.extract_from(row))
         end
       end
     end

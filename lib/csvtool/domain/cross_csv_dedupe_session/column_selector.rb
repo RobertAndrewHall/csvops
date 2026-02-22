@@ -30,6 +30,14 @@ module Csvtool
         def index?
           !@headers_present
         end
+
+        def extract_from(row)
+          if headers_present?
+            row[@value].to_s
+          else
+            row[@value - 1].to_s
+          end
+        end
       end
     end
   end

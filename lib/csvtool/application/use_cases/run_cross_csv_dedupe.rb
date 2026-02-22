@@ -120,14 +120,11 @@ module Csvtool
           dedupe_options = {
             source_path: session.source.path,
             reference_path: session.reference.path,
-            source_selector: session.key_mapping.source_selector.value,
-            reference_selector: session.key_mapping.reference_selector.value,
+            source_selector: session.key_mapping.source_selector,
+            reference_selector: session.key_mapping.reference_selector,
             source_col_sep: session.source.separator,
             reference_col_sep: session.reference.separator,
-            source_has_headers: session.source.headers_present?,
-            reference_has_headers: session.reference.headers_present?,
-            trim_whitespace: session.match_options.trim_whitespace?,
-            case_insensitive: session.match_options.case_insensitive?
+            match_options: session.match_options
           }
 
           current_read_path = session.source.path

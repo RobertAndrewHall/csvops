@@ -2,6 +2,8 @@
 
 require_relative "../../../test_helper"
 require "csvtool/infrastructure/csv/cross_csv_deduper"
+require "csvtool/domain/cross_csv_dedupe_session/column_selector"
+require "csvtool/domain/cross_csv_dedupe_session/match_options"
 require "tmpdir"
 
 class InfrastructureCrossCsvDeduperTest < Minitest::Test
@@ -15,12 +17,10 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     result = deduper.call(
       source_path: fixture_path("dedupe_source.csv"),
       reference_path: fixture_path("dedupe_reference.csv"),
-      source_selector: "customer_id",
-      reference_selector: "external_id",
+      source_selector: header_selector("customer_id"),
+      reference_selector: header_selector("external_id"),
       source_col_sep: ",",
-      reference_col_sep: ",",
-      source_has_headers: true,
-      reference_has_headers: true
+      reference_col_sep: ","
     )
 
     assert_equal ["customer_id", "name"], result[:headers]
@@ -36,10 +36,9 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     result = deduper.call(
       source_path: fixture_path("dedupe_source_normalization.csv"),
       reference_path: fixture_path("dedupe_reference_normalization.csv"),
-      source_selector: "customer_id",
-      reference_selector: "external_id",
-      trim_whitespace: true,
-      case_insensitive: false
+      source_selector: header_selector("customer_id"),
+      reference_selector: header_selector("external_id"),
+      match_options: match_options(trim_whitespace: true, case_insensitive: false)
     )
 
     assert_equal 3, result[:kept_rows_count]
@@ -51,10 +50,9 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     result = deduper.call(
       source_path: fixture_path("dedupe_source_normalization.csv"),
       reference_path: fixture_path("dedupe_reference_normalization.csv"),
-      source_selector: "customer_id",
-      reference_selector: "external_id",
-      trim_whitespace: true,
-      case_insensitive: true
+      source_selector: header_selector("customer_id"),
+      reference_selector: header_selector("external_id"),
+      match_options: match_options(trim_whitespace: true, case_insensitive: true)
     )
 
     assert_equal 1, result[:kept_rows_count]
@@ -67,10 +65,9 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     result = deduper.call(
       source_path: fixture_path("dedupe_source_normalization.csv"),
       reference_path: fixture_path("dedupe_reference_normalization.csv"),
-      source_selector: "customer_id",
-      reference_selector: "external_id",
-      trim_whitespace: false,
-      case_insensitive: true
+      source_selector: header_selector("customer_id"),
+      reference_selector: header_selector("external_id"),
+      match_options: match_options(trim_whitespace: false, case_insensitive: true)
     )
 
     assert_equal 2, result[:kept_rows_count]
@@ -83,10 +80,9 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     result = deduper.call(
       source_path: fixture_path("dedupe_source_normalization.csv"),
       reference_path: fixture_path("dedupe_reference_normalization.csv"),
-      source_selector: "customer_id",
-      reference_selector: "external_id",
-      trim_whitespace: false,
-      case_insensitive: false
+      source_selector: header_selector("customer_id"),
+      reference_selector: header_selector("external_id"),
+      match_options: match_options(trim_whitespace: false, case_insensitive: false)
     )
 
     assert_equal 3, result[:kept_rows_count]
@@ -99,8 +95,8 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     result = deduper.each_retained(
       source_path: fixture_path("dedupe_source.csv"),
       reference_path: fixture_path("dedupe_reference.csv"),
-      source_selector: "customer_id",
-      reference_selector: "external_id"
+      source_selector: header_selector("customer_id"),
+      reference_selector: header_selector("external_id")
     ) { |fields| yielded_rows << fields }
 
     assert_equal [%w[1 Alice], %w[3 Cara]], yielded_rows
@@ -133,8 +129,8 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
       result = deduper.each_retained(
         source_path: source_path,
         reference_path: reference_path,
-        source_selector: "id",
-        reference_selector: "external_id"
+        source_selector: header_selector("id"),
+        reference_selector: header_selector("external_id")
       ) { |_fields| yielded_count += 1 }
 
       assert_equal 10_000, result[:source_rows]
@@ -142,5 +138,18 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
       assert_equal 5_000, result[:kept_rows_count]
       assert_equal 5_000, yielded_count
     end
+  end
+
+  private
+
+  def header_selector(name)
+    Csvtool::Domain::CrossCsvDedupeSession::ColumnSelector.from_input(headers_present: true, input: name)
+  end
+
+  def match_options(trim_whitespace:, case_insensitive:)
+    Csvtool::Domain::CrossCsvDedupeSession::MatchOptions.new(
+      trim_whitespace: trim_whitespace,
+      case_insensitive: case_insensitive
+    )
   end
 end
