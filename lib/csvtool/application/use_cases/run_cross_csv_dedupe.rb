@@ -1,123 +1,75 @@
 # frozen_string_literal: true
 
 require "csv"
-require "csvtool/interface/cli/errors/presenter"
-require "csvtool/interface/cli/prompts/file_path_prompt"
-require "csvtool/interface/cli/prompts/separator_prompt"
-require "csvtool/interface/cli/prompts/headers_present_prompt"
-require "csvtool/interface/cli/prompts/output_destination_prompt"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/cross_csv_deduper"
 require "csvtool/infrastructure/csv/selector_validator"
-require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
-require "csvtool/domain/cross_csv_dedupe_session/column_selector"
-require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
-require "csvtool/domain/cross_csv_dedupe_session/match_options"
-require "csvtool/domain/cross_csv_dedupe_session/cross_csv_dedupe_session"
-require "csvtool/domain/shared/output_destination"
 
 module Csvtool
   module Application
     module UseCases
       class RunCrossCsvDedupe
-        def initialize(stdin:, stdout:)
-          @stdin = stdin
-          @stdout = stdout
-          @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
-          @header_reader = Infrastructure::CSV::HeaderReader.new
-          @deduper = Infrastructure::CSV::CrossCsvDeduper.new
-          @selector_validator = Infrastructure::CSV::SelectorValidator.new(header_reader: @header_reader)
+        Result = Struct.new(:ok, :error, :data, keyword_init: true) do
+          def ok?
+            ok
+          end
         end
 
-        def call
-          source_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
-          return @errors.file_not_found(source_path) unless File.file?(source_path)
-          current_read_path = source_path
-          @stdout.puts "Source CSV separator:"
-          source_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-          return if source_col_sep.nil?
-          @stdout.print "Source headers present? [Y/n]: "
-          source_headers_present = !%w[n no].include?(@stdin.gets&.strip.to_s.downcase)
-          source = Domain::CrossCsvDedupeSession::CsvProfile.new(
-            path: source_path,
-            separator: source_col_sep,
-            headers_present: source_headers_present
-          )
+        def initialize(
+          header_reader: Infrastructure::CSV::HeaderReader.new,
+          deduper: Infrastructure::CSV::CrossCsvDeduper.new,
+          selector_validator: Infrastructure::CSV::SelectorValidator.new(header_reader: header_reader)
+        )
+          @header_reader = header_reader
+          @deduper = deduper
+          @selector_validator = selector_validator
+        end
 
-          @stdout.print "Reference CSV file path: "
-          reference_path = @stdin.gets&.strip.to_s
-          return @errors.file_not_found(reference_path) unless File.file?(reference_path)
-          current_read_path = reference_path
-          @stdout.puts "Reference CSV separator:"
-          reference_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
-          return if reference_col_sep.nil?
-          @stdout.print "Reference headers present? [Y/n]: "
-          reference_headers_present = !%w[n no].include?(@stdin.gets&.strip.to_s.downcase)
-          reference = Domain::CrossCsvDedupeSession::CsvProfile.new(
-            path: reference_path,
-            separator: reference_col_sep,
-            headers_present: reference_headers_present
-          )
+        def call(session:, on_header: nil, on_row: nil)
+          current_read_path = session.source.path
+          return failure(:column_not_found) unless @selector_validator.valid?(profile: session.source, selector: session.key_mapping.source_selector)
 
-          if source_headers_present
-            @stdout.print "Source key column name: "
-          else
-            @stdout.print "Source key column index (1-based): "
-          end
-          source_column = @stdin.gets&.strip.to_s
-          if reference_headers_present
-            @stdout.print "Reference key column name: "
-          else
-            @stdout.print "Reference key column index (1-based): "
-          end
-          reference_column = @stdin.gets&.strip.to_s
-          @stdout.print "Trim whitespace before matching? [Y/n]: "
-          trim_whitespace = read_yes_no(default: true)
-          @stdout.print "Case-insensitive matching? [y/N]: "
-          case_insensitive = read_yes_no(default: false)
-
-          source_selector = resolve_selector(
-            column_input: source_column,
-            profile: source
-          )
-          return @errors.column_not_found if source_selector.nil?
-
-          reference_selector = resolve_selector(
-            column_input: reference_column,
-            profile: reference
-          )
-          return @errors.column_not_found if reference_selector.nil?
-          key_mapping = Domain::CrossCsvDedupeSession::KeyMapping.new(
-            source_selector: source_selector,
-            reference_selector: reference_selector
-          )
-          match_options = Domain::CrossCsvDedupeSession::MatchOptions.new(
-            trim_whitespace: trim_whitespace,
-            case_insensitive: case_insensitive
-          )
-          session = Domain::CrossCsvDedupeSession::CrossCsvDedupeSession.start(
-            source: source,
-            reference: reference,
-            key_mapping: key_mapping,
-            match_options: match_options
-          )
-
-          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-            stdin: @stdin,
-            stdout: @stdout,
-            errors: @errors
-          ).call
-          return if output_destination.nil?
-          destination =
-            if output_destination[:mode] == :file
-              Domain::Shared::OutputDestination.file(path: output_destination[:path])
-            else
-              Domain::Shared::OutputDestination.console
-            end
-          session = session.with_output_destination(destination)
+          current_read_path = session.reference.path
+          return failure(:column_not_found) unless @selector_validator.valid?(profile: session.reference, selector: session.key_mapping.reference_selector)
 
           source_headers = session.source.headers_present? ? @header_reader.call(file_path: session.source.path, col_sep: session.source.separator) : nil
-          dedupe_options = {
+          current_read_path = session.source.path
+
+          if session.output_destination.file?
+            write_file(session: session, source_headers: source_headers)
+          else
+            on_header.call(source_headers) if on_header && source_headers
+            stats = @deduper.each_retained(**dedupe_options(session)) do |fields|
+              on_row.call(fields) if on_row
+            end
+            success(stats: stats)
+          end
+        rescue CSV::MalformedCSVError
+          failure(:could_not_parse_csv)
+        rescue Errno::EACCES
+          failure(:cannot_read_file, path: current_read_path || session.source.path)
+        end
+
+        private
+
+        def write_file(session:, source_headers:)
+          stats = nil
+          ::CSV.open(
+            session.output_destination.path,
+            "w",
+            write_headers: !source_headers.nil?,
+            headers: source_headers,
+            col_sep: session.source.separator
+          ) do |csv|
+            stats = @deduper.each_retained(**dedupe_options(session)) { |fields| csv << fields }
+          end
+          success(stats: stats, output_path: session.output_destination.path)
+        rescue Errno::EACCES, Errno::ENOENT => e
+          failure(:cannot_write_output_file, path: session.output_destination.path, error_class: e.class)
+        end
+
+        def dedupe_options(session)
+          {
             source_path: session.source.path,
             reference_path: session.reference.path,
             source_selector: session.key_mapping.source_selector,
@@ -126,76 +78,14 @@ module Csvtool
             reference_col_sep: session.reference.separator,
             match_options: session.match_options
           }
-
-          current_read_path = session.source.path
-          if session.output_destination.file?
-            result = write_output_file(
-              session.output_destination.path,
-              source_headers,
-              col_sep: session.source.separator,
-              dedupe_options: dedupe_options
-            )
-            return if result.nil?
-          else
-            result = print_to_console(
-              source_headers,
-              col_sep: session.source.separator,
-              dedupe_options: dedupe_options
-            )
-          end
-          @stdout.puts "Summary: source_rows=#{result[:source_rows]} removed_rows=#{result[:removed_rows]} kept_rows=#{result[:kept_rows_count]}"
-          @stdout.puts "No rows removed; no matching keys found." if result[:removed_rows].zero?
-          @stdout.puts "All source rows were removed by dedupe." if result[:source_rows].positive? && result[:kept_rows_count].zero?
-        rescue CSV::MalformedCSVError
-          @errors.could_not_parse_csv
-        rescue ArgumentError => e
-          return @errors.empty_output_path if e.message == "file output path cannot be empty"
-
-          raise e
-        rescue Errno::EACCES
-          @errors.cannot_read_file(current_read_path || source_path)
         end
 
-        private
-
-        def resolve_selector(column_input:, profile:)
-          selector = Domain::CrossCsvDedupeSession::ColumnSelector.from_input(
-            headers_present: profile.headers_present?,
-            input: column_input
-          )
-
-          @selector_validator.valid?(profile: profile, selector: selector) ? selector : nil
-        rescue ArgumentError
-          nil
+        def success(data)
+          Result.new(ok: true, error: nil, data: data)
         end
 
-        def print_to_console(headers, col_sep:, dedupe_options:)
-          @stdout.puts
-          @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: col_sep).chomp if headers
-          @deduper.each_retained(**dedupe_options) do |fields|
-            @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: col_sep).chomp
-          end
-        end
-
-        def write_output_file(path, headers, col_sep:, dedupe_options:)
-          result = nil
-          ::CSV.open(path, "w", write_headers: !headers.nil?, headers: headers, col_sep: col_sep) do |csv|
-            result = @deduper.each_retained(**dedupe_options) { |fields| csv << fields }
-          end
-          @stdout.puts "Wrote output to #{path}"
-          result
-        rescue Errno::EACCES, Errno::ENOENT => e
-          @errors.cannot_write_output_file(path, e.class)
-          nil
-        end
-
-        def read_yes_no(default:)
-          answer = @stdin.gets&.strip.to_s.downcase
-          return default if answer.empty?
-          return true if %w[y yes].include?(answer)
-          return false if %w[n no].include?(answer)
-
-          default
+        def failure(code, data = {})
+          Result.new(ok: false, error: code, data: data)
         end
       end
     end

@@ -1,0 +1,163 @@
+# frozen_string_literal: true
+
+require "csv"
+require "csvtool/application/use_cases/run_cross_csv_dedupe"
+require "csvtool/interface/cli/errors/presenter"
+require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/output_destination_prompt"
+require "csvtool/domain/cross_csv_dedupe_session/csv_profile"
+require "csvtool/domain/cross_csv_dedupe_session/column_selector"
+require "csvtool/domain/cross_csv_dedupe_session/key_mapping"
+require "csvtool/domain/cross_csv_dedupe_session/match_options"
+require "csvtool/domain/cross_csv_dedupe_session/cross_csv_dedupe_session"
+require "csvtool/domain/shared/output_destination"
+
+module Csvtool
+  module Interface
+    module CLI
+      module Workflows
+        class RunCrossCsvDedupeWorkflow
+          def initialize(stdin:, stdout:, use_case: Application::UseCases::RunCrossCsvDedupe.new)
+            @stdin = stdin
+            @stdout = stdout
+            @use_case = use_case
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
+          end
+
+          def call
+            source_path = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout).call
+            return @errors.file_not_found(source_path) unless File.file?(source_path)
+
+            @stdout.puts "Source CSV separator:"
+            source_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+            return if source_col_sep.nil?
+            @stdout.print "Source headers present? [Y/n]: "
+            source_headers_present = !%w[n no].include?(@stdin.gets&.strip.to_s.downcase)
+            source = Domain::CrossCsvDedupeSession::CsvProfile.new(
+              path: source_path,
+              separator: source_col_sep,
+              headers_present: source_headers_present
+            )
+
+            @stdout.print "Reference CSV file path: "
+            reference_path = @stdin.gets&.strip.to_s
+            return @errors.file_not_found(reference_path) unless File.file?(reference_path)
+
+            @stdout.puts "Reference CSV separator:"
+            reference_col_sep = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors).call
+            return if reference_col_sep.nil?
+            @stdout.print "Reference headers present? [Y/n]: "
+            reference_headers_present = !%w[n no].include?(@stdin.gets&.strip.to_s.downcase)
+            reference = Domain::CrossCsvDedupeSession::CsvProfile.new(
+              path: reference_path,
+              separator: reference_col_sep,
+              headers_present: reference_headers_present
+            )
+
+            source_selector = prompt_selector("Source", source.headers_present?)
+            return @errors.column_not_found if source_selector.nil?
+            reference_selector = prompt_selector("Reference", reference.headers_present?)
+            return @errors.column_not_found if reference_selector.nil?
+
+            @stdout.print "Trim whitespace before matching? [Y/n]: "
+            trim_whitespace = read_yes_no(default: true)
+            @stdout.print "Case-insensitive matching? [y/N]: "
+            case_insensitive = read_yes_no(default: false)
+
+            key_mapping = Domain::CrossCsvDedupeSession::KeyMapping.new(
+              source_selector: source_selector,
+              reference_selector: reference_selector
+            )
+            match_options = Domain::CrossCsvDedupeSession::MatchOptions.new(
+              trim_whitespace: trim_whitespace,
+              case_insensitive: case_insensitive
+            )
+            session = Domain::CrossCsvDedupeSession::CrossCsvDedupeSession.start(
+              source: source,
+              reference: reference,
+              key_mapping: key_mapping,
+              match_options: match_options
+            )
+
+            output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
+              stdin: @stdin,
+              stdout: @stdout,
+              errors: @errors
+            ).call
+            return if output_destination.nil?
+            session = session.with_output_destination(
+              if output_destination[:mode] == :file
+                Domain::Shared::OutputDestination.file(path: output_destination[:path])
+              else
+                Domain::Shared::OutputDestination.console
+              end
+            )
+
+            result = @use_case.call(
+              session: session,
+              on_header: ->(headers) { print_header(headers, col_sep: session.source.separator) },
+              on_row: ->(fields) { print_row(fields, col_sep: session.source.separator) }
+            )
+            return handle_error(result) unless result.ok?
+
+            @stdout.puts "Wrote output to #{result.data[:output_path]}" if session.output_destination.file?
+            stats = result.data[:stats]
+            @stdout.puts "Summary: source_rows=#{stats[:source_rows]} removed_rows=#{stats[:removed_rows]} kept_rows=#{stats[:kept_rows_count]}"
+            @stdout.puts "No rows removed; no matching keys found." if stats[:removed_rows].zero?
+            @stdout.puts "All source rows were removed by dedupe." if stats[:source_rows].positive? && stats[:kept_rows_count].zero?
+          rescue ArgumentError => e
+            return @errors.empty_output_path if e.message == "file output path cannot be empty"
+
+            raise e
+          end
+
+          private
+
+          def prompt_selector(label, headers_present)
+            if headers_present
+              @stdout.print "#{label} key column name: "
+            else
+              @stdout.print "#{label} key column index (1-based): "
+            end
+            input = @stdin.gets&.strip.to_s
+            Domain::CrossCsvDedupeSession::ColumnSelector.from_input(headers_present: headers_present, input: input)
+          rescue ArgumentError
+            nil
+          end
+
+          def print_header(headers, col_sep:)
+            @stdout.puts
+            @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: col_sep).chomp
+          end
+
+          def print_row(fields, col_sep:)
+            @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: col_sep).chomp
+          end
+
+          def handle_error(result)
+            case result.error
+            when :column_not_found
+              @errors.column_not_found
+            when :could_not_parse_csv
+              @errors.could_not_parse_csv
+            when :cannot_read_file
+              @errors.cannot_read_file(result.data[:path])
+            when :cannot_write_output_file
+              @errors.cannot_write_output_file(result.data[:path], result.data[:error_class])
+            end
+          end
+
+          def read_yes_no(default:)
+            answer = @stdin.gets&.strip.to_s.downcase
+            return default if answer.empty?
+            return true if %w[y yes].include?(answer)
+            return false if %w[n no].include?(answer)
+
+            default
+          end
+        end
+      end
+    end
+  end
+end
