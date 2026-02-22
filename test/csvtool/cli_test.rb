@@ -284,10 +284,10 @@ class TestCli < Minitest::Test
     output = StringIO.new
     input = [
       "4",
-      fixture_path("sample_people.csv"),
-      fixture_path("sample_people.csv"),
-      "name",
-      "name",
+      fixture_path("dedupe_source.csv"),
+      fixture_path("dedupe_reference.csv"),
+      "customer_id",
+      "external_id",
       "5"
     ].join("\n") + "\n"
 
@@ -297,7 +297,10 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Reference CSV file path:"
     assert_includes output.string, "Source key column name:"
     assert_includes output.string, "Reference key column name:"
-    assert_includes output.string, "Dedupe workflow selected."
+    assert_includes output.string, "customer_id,name"
+    assert_includes output.string, "1,Alice"
+    assert_includes output.string, "3,Cara"
+    assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
   end
 
   def test_end_to_end_file_output_writes_expected_csv

@@ -50,11 +50,14 @@ class CliUnitTest < Minitest::Test
 
   def test_menu_routes_to_dedupe_shell
     stdout = StringIO.new
-    source_fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    reference_fixture = File.expand_path("../fixtures/sample_people.csv", __dir__)
-    input = ["4", source_fixture, reference_fixture, "name", "name", "5"].join("\n") + "\n"
+    source_fixture = File.expand_path("../fixtures/dedupe_source.csv", __dir__)
+    reference_fixture = File.expand_path("../fixtures/dedupe_reference.csv", __dir__)
+    input = ["4", source_fixture, reference_fixture, "customer_id", "external_id", "5"].join("\n") + "\n"
     status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: stdout, stderr: StringIO.new)
     assert_equal 0, status
-    assert_includes stdout.string, "Dedupe workflow selected."
+    assert_includes stdout.string, "customer_id,name"
+    assert_includes stdout.string, "1,Alice"
+    assert_includes stdout.string, "3,Cara"
+    assert_includes stdout.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
   end
 end
