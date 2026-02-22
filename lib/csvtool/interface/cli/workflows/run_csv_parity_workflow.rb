@@ -8,6 +8,10 @@ require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/workflows/builders/csv_parity_session_builder"
 require "csvtool/interface/cli/workflows/presenters/csv_parity_presenter"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
+require "csvtool/interface/cli/workflows/steps/workflow_step_pipeline"
+require "csvtool/interface/cli/workflows/steps/parity/collect_inputs_step"
+require "csvtool/interface/cli/workflows/steps/parity/build_session_step"
+require "csvtool/interface/cli/workflows/steps/parity/execute_step"
 
 module Csvtool
   module Interface
@@ -25,25 +29,22 @@ module Csvtool
           end
 
           def call
-            file_path_prompt = Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout)
-            left_path = file_path_prompt.call(label: "Left CSV file path: ")
-            right_path = file_path_prompt.call(label: "Right CSV file path: ")
-            separator_prompt = Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors)
-            col_sep = separator_prompt.call
-            return nil if col_sep.nil?
-
-            headers_present = Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout).call
-
-            session = @session_builder.call(
-              left_path: left_path,
-              right_path: right_path,
-              col_sep: col_sep,
-              headers_present: headers_present
-            )
-            result = @use_case.call(session: session)
-            return handle_error(result) unless result.ok?
-
-            @presenter.print_summary(result.data)
+            context = {
+              use_case: @use_case,
+              session_builder: @session_builder,
+              presenter: @presenter,
+              handle_error: method(:handle_error)
+            }
+            pipeline = Steps::WorkflowStepPipeline.new(steps: [
+              Steps::Parity::CollectInputsStep.new(
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
+              ),
+              Steps::Parity::BuildSessionStep.new,
+              Steps::Parity::ExecuteStep.new
+            ])
+            pipeline.call(context)
             nil
           end
 
