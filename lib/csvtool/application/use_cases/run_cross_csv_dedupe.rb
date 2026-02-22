@@ -76,8 +76,15 @@ module Csvtool
           )
           return @errors.column_not_found if reference_selector.nil?
 
-          current_read_path = source_path
-          result = @deduper.call(
+          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
+            stdin: @stdin,
+            stdout: @stdout,
+            errors: @errors
+          ).call
+          return if output_destination.nil?
+
+          source_headers = source_headers_present ? @header_reader.call(file_path: source_path, col_sep: source_col_sep) : nil
+          dedupe_options = {
             source_path: source_path,
             reference_path: reference_path,
             source_selector: source_selector,
@@ -88,19 +95,23 @@ module Csvtool
             reference_has_headers: reference_headers_present,
             trim_whitespace: trim_whitespace,
             case_insensitive: case_insensitive
-          )
+          }
 
-          output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
-            stdin: @stdin,
-            stdout: @stdout,
-            errors: @errors
-          ).call
-          return if output_destination.nil?
-
+          current_read_path = source_path
           if output_destination[:mode] == :file
-            write_output_file(output_destination[:path], result[:headers], result[:kept_rows], col_sep: source_col_sep)
+            result = write_output_file(
+              output_destination[:path],
+              source_headers,
+              col_sep: source_col_sep,
+              dedupe_options: dedupe_options
+            )
+            return if result.nil?
           else
-            print_to_console(result[:headers], result[:kept_rows], col_sep: source_col_sep)
+            result = print_to_console(
+              source_headers,
+              col_sep: source_col_sep,
+              dedupe_options: dedupe_options
+            )
           end
           @stdout.puts "Summary: source_rows=#{result[:source_rows]} removed_rows=#{result[:removed_rows]} kept_rows=#{result[:kept_rows_count]}"
           @stdout.puts "No rows removed; no matching keys found." if result[:removed_rows].zero?
@@ -132,19 +143,24 @@ module Csvtool
           end
         end
 
-        def print_to_console(headers, rows, col_sep:)
+        def print_to_console(headers, col_sep:, dedupe_options:)
           @stdout.puts
           @stdout.puts ::CSV.generate_line(headers, row_sep: "", col_sep: col_sep).chomp if headers
-          rows.each { |fields| @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: col_sep).chomp }
+          @deduper.each_retained(**dedupe_options) do |fields|
+            @stdout.puts ::CSV.generate_line(fields, row_sep: "", col_sep: col_sep).chomp
+          end
         end
 
-        def write_output_file(path, headers, rows, col_sep:)
+        def write_output_file(path, headers, col_sep:, dedupe_options:)
+          result = nil
           ::CSV.open(path, "w", write_headers: !headers.nil?, headers: headers, col_sep: col_sep) do |csv|
-            rows.each { |fields| csv << fields }
+            result = @deduper.each_retained(**dedupe_options) { |fields| csv << fields }
           end
           @stdout.puts "Wrote output to #{path}"
+          result
         rescue Errno::EACCES, Errno::ENOENT => e
           @errors.cannot_write_output_file(path, e.class)
+          nil
         end
 
         def read_yes_no(default:)

@@ -2,6 +2,7 @@
 
 require_relative "../../../test_helper"
 require "csvtool/infrastructure/csv/cross_csv_deduper"
+require "tmpdir"
 
 class InfrastructureCrossCsvDeduperTest < Minitest::Test
   def fixture_path(name)
@@ -89,5 +90,57 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     )
 
     assert_equal 3, result[:kept_rows_count]
+  end
+
+  def test_each_retained_streams_rows_and_reports_stats
+    deduper = Csvtool::Infrastructure::CSV::CrossCsvDeduper.new
+    yielded_rows = []
+
+    result = deduper.each_retained(
+      source_path: fixture_path("dedupe_source.csv"),
+      reference_path: fixture_path("dedupe_reference.csv"),
+      source_selector: "customer_id",
+      reference_selector: "external_id"
+    ) { |fields| yielded_rows << fields }
+
+    assert_equal [%w[1 Alice], %w[3 Cara]], yielded_rows
+    assert_equal 5, result[:source_rows]
+    assert_equal 3, result[:removed_rows]
+    assert_equal 2, result[:kept_rows_count]
+    refute_includes result.keys, :kept_rows
+  end
+
+  def test_each_retained_supports_large_inputs_with_streaming
+    deduper = Csvtool::Infrastructure::CSV::CrossCsvDeduper.new
+
+    Dir.mktmpdir do |dir|
+      source_path = File.join(dir, "source.csv")
+      reference_path = File.join(dir, "reference.csv")
+
+      File.open(source_path, "w") do |file|
+        file.puts "id,name"
+        10_000.times { |index| file.puts "#{index},name#{index}" }
+      end
+
+      File.open(reference_path, "w") do |file|
+        file.puts "external_id"
+        10_000.times do |index|
+          file.puts index.to_s if (index % 2).zero?
+        end
+      end
+
+      yielded_count = 0
+      result = deduper.each_retained(
+        source_path: source_path,
+        reference_path: reference_path,
+        source_selector: "id",
+        reference_selector: "external_id"
+      ) { |_fields| yielded_count += 1 }
+
+      assert_equal 10_000, result[:source_rows]
+      assert_equal 5_000, result[:removed_rows]
+      assert_equal 5_000, result[:kept_rows_count]
+      assert_equal 5_000, yielded_count
+    end
   end
 end

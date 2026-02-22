@@ -153,6 +153,16 @@ The codebase follows a DDD-lite layered structure:
 
 Bounded contexts: `Column Extraction`, `Row Extraction`, and `Row Randomization`.
 
+### Cross-CSV Dedupe (Large-file behavior)
+
+- Workflow: remove rows from a source CSV when source key matches a key from a reference CSV.
+- Scaling strategy:
+  - Reference CSV keys are loaded into a `Set` for fast membership checks.
+  - Source CSV rows are streamed directly to the selected output destination (console or file).
+- Memory tradeoff:
+  - Memory is dominated by the number of unique keys in the reference CSV.
+  - Source-row memory stays bounded because retained rows are not accumulated in memory before writing.
+
 ### Column Extraction
 
 - Aggregate root: `ColumnSession`
@@ -271,6 +281,7 @@ lib/csvtool/domain/row_randomization_session/*
 lib/csvtool/application/use_cases/run_extraction.rb
 lib/csvtool/application/use_cases/run_row_extraction.rb
 lib/csvtool/application/use_cases/run_row_randomization.rb
+lib/csvtool/application/use_cases/run_cross_csv_dedupe.rb
 lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/interface/cli/menu_loop.rb
