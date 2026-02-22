@@ -53,6 +53,10 @@ module Csvtool
             @stdout.print "Reference key column index (1-based): "
           end
           reference_column = @stdin.gets&.strip.to_s
+          @stdout.print "Trim whitespace before matching? [Y/n]: "
+          trim_whitespace = read_yes_no(default: true)
+          @stdout.print "Case-insensitive matching? [y/N]: "
+          case_insensitive = read_yes_no(default: false)
 
           return if source_path.empty? || reference_path.empty? || source_column.empty? || reference_column.empty?
 
@@ -81,7 +85,9 @@ module Csvtool
             source_col_sep: source_col_sep,
             reference_col_sep: reference_col_sep,
             source_has_headers: source_headers_present,
-            reference_has_headers: reference_headers_present
+            reference_has_headers: reference_headers_present,
+            trim_whitespace: trim_whitespace,
+            case_insensitive: case_insensitive
           )
 
           output_destination = Interface::CLI::Prompts::OutputDestinationPrompt.new(
@@ -139,6 +145,15 @@ module Csvtool
           @stdout.puts "Wrote output to #{path}"
         rescue Errno::EACCES, Errno::ENOENT => e
           @errors.cannot_write_output_file(path, e.class)
+        end
+
+        def read_yes_no(default:)
+          answer = @stdin.gets&.strip.to_s.downcase
+          return default if answer.empty?
+          return true if %w[y yes].include?(answer)
+          return false if %w[n no].include?(answer)
+
+          default
         end
       end
     end

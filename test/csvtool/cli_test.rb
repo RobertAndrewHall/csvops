@@ -293,6 +293,8 @@ class TestCli < Minitest::Test
       "customer_id",
       "external_id",
       "",
+      "",
+      "",
       "5"
     ].join("\n") + "\n"
 
@@ -321,11 +323,13 @@ class TestCli < Minitest::Test
         fixture_path("dedupe_reference.csv"),
         "",
         "",
-        "customer_id",
-        "external_id",
-        "2",
-        output_path,
-        "5"
+      "customer_id",
+      "external_id",
+      "",
+      "",
+      "2",
+      output_path,
+      "5"
       ].join("\n") + "\n"
 
       status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
@@ -350,6 +354,8 @@ class TestCli < Minitest::Test
       "customer_id",
       "external_id",
       "",
+      "",
+      "",
       "5"
     ].join("\n") + "\n"
 
@@ -373,6 +379,8 @@ class TestCli < Minitest::Test
       "n",
       "1",
       "1",
+      "",
+      "",
       "",
       "5"
     ].join("\n") + "\n"

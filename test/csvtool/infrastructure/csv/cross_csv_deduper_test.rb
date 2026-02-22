@@ -28,4 +28,66 @@ class InfrastructureCrossCsvDeduperTest < Minitest::Test
     assert_equal 2, result[:kept_rows_count]
     assert_equal [%w[1 Alice], %w[3 Cara]], result[:kept_rows]
   end
+
+  def test_normalization_trim_on_case_off
+    deduper = Csvtool::Infrastructure::CSV::CrossCsvDeduper.new
+
+    result = deduper.call(
+      source_path: fixture_path("dedupe_source_normalization.csv"),
+      reference_path: fixture_path("dedupe_reference_normalization.csv"),
+      source_selector: "customer_id",
+      reference_selector: "external_id",
+      trim_whitespace: true,
+      case_insensitive: false
+    )
+
+    assert_equal 3, result[:kept_rows_count]
+  end
+
+  def test_normalization_trim_on_case_on
+    deduper = Csvtool::Infrastructure::CSV::CrossCsvDeduper.new
+
+    result = deduper.call(
+      source_path: fixture_path("dedupe_source_normalization.csv"),
+      reference_path: fixture_path("dedupe_reference_normalization.csv"),
+      source_selector: "customer_id",
+      reference_selector: "external_id",
+      trim_whitespace: true,
+      case_insensitive: true
+    )
+
+    assert_equal 1, result[:kept_rows_count]
+    assert_equal [%w[B2 Bob]], result[:kept_rows]
+  end
+
+  def test_normalization_trim_off_case_on
+    deduper = Csvtool::Infrastructure::CSV::CrossCsvDeduper.new
+
+    result = deduper.call(
+      source_path: fixture_path("dedupe_source_normalization.csv"),
+      reference_path: fixture_path("dedupe_reference_normalization.csv"),
+      source_selector: "customer_id",
+      reference_selector: "external_id",
+      trim_whitespace: false,
+      case_insensitive: true
+    )
+
+    assert_equal 2, result[:kept_rows_count]
+    assert_equal [[" A1 ", "Alice"], %w[B2 Bob]], result[:kept_rows]
+  end
+
+  def test_normalization_trim_off_case_off
+    deduper = Csvtool::Infrastructure::CSV::CrossCsvDeduper.new
+
+    result = deduper.call(
+      source_path: fixture_path("dedupe_source_normalization.csv"),
+      reference_path: fixture_path("dedupe_reference_normalization.csv"),
+      source_selector: "customer_id",
+      reference_selector: "external_id",
+      trim_whitespace: false,
+      case_insensitive: false
+    )
+
+    assert_equal 3, result[:kept_rows_count]
+  end
 end

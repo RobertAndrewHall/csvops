@@ -20,6 +20,8 @@ class RunCrossCsvDedupeTest < Minitest::Test
       "",
       "customer_id",
       "external_id",
+      "",
+      "",
       ""
     ].join("\n") + "\n"
 
@@ -49,10 +51,12 @@ class RunCrossCsvDedupeTest < Minitest::Test
         fixture_path("dedupe_reference.csv"),
         "",
         "",
-        "customer_id",
-        "external_id",
-        "2",
-        output_path
+      "customer_id",
+      "external_id",
+      "",
+      "",
+      "2",
+      output_path
       ].join("\n") + "\n"
 
       Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
@@ -74,6 +78,8 @@ class RunCrossCsvDedupeTest < Minitest::Test
       "",
       "customer_id",
       "external_id",
+      "",
+      "",
       ""
     ].join("\n") + "\n"
 
@@ -95,6 +101,8 @@ class RunCrossCsvDedupeTest < Minitest::Test
       "n",
       "1",
       "1",
+      "",
+      "",
       ""
     ].join("\n") + "\n"
 
@@ -116,7 +124,9 @@ class RunCrossCsvDedupeTest < Minitest::Test
       "",
       "",
       "missing",
-      "external_id"
+      "external_id",
+      "",
+      ""
     ].join("\n") + "\n"
 
     Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
@@ -135,6 +145,8 @@ class RunCrossCsvDedupeTest < Minitest::Test
       "",
       "customer_id",
       "external_id",
+      "",
+      "",
       ""
     ].join("\n") + "\n"
 
@@ -155,6 +167,8 @@ class RunCrossCsvDedupeTest < Minitest::Test
       "",
       "customer_id",
       "external_id",
+      "",
+      "",
       ""
     ].join("\n") + "\n"
 
@@ -162,5 +176,53 @@ class RunCrossCsvDedupeTest < Minitest::Test
 
     assert_includes output.string, "Summary: source_rows=5 removed_rows=5 kept_rows=0"
     assert_includes output.string, "All source rows were removed by dedupe."
+  end
+
+  def test_normalization_trim_on_and_case_insensitive_on_matches_equivalent_keys
+    output = StringIO.new
+    input = [
+      fixture_path("dedupe_source_normalization.csv"),
+      "",
+      "",
+      fixture_path("dedupe_reference_normalization.csv"),
+      "",
+      "",
+      "customer_id",
+      "external_id",
+      "",
+      "y",
+      ""
+    ].join("\n") + "\n"
+
+    Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
+
+    refute_includes output.string, " A1 ,Alice"
+    refute_includes output.string, "c3,Cara"
+    assert_includes output.string, "B2,Bob"
+    assert_includes output.string, "Summary: source_rows=3 removed_rows=2 kept_rows=1"
+  end
+
+  def test_normalization_disabled_preserves_exact_match_behavior
+    output = StringIO.new
+    input = [
+      fixture_path("dedupe_source_normalization.csv"),
+      "",
+      "",
+      fixture_path("dedupe_reference_normalization.csv"),
+      "",
+      "",
+      "customer_id",
+      "external_id",
+      "n",
+      "n",
+      ""
+    ].join("\n") + "\n"
+
+    Csvtool::Application::UseCases::RunCrossCsvDedupe.new(stdin: StringIO.new(input), stdout: output).call
+
+    assert_includes output.string, " A1 ,Alice"
+    assert_includes output.string, "B2,Bob"
+    assert_includes output.string, "c3,Cara"
+    assert_includes output.string, "Summary: source_rows=3 removed_rows=0 kept_rows=3"
   end
 end
