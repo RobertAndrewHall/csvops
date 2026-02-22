@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "csvtool/application/use_cases/run_csv_parity"
+require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
 
 module Csvtool
@@ -12,6 +13,7 @@ module Csvtool
             @stdin = stdin
             @stdout = stdout
             @use_case = use_case
+            @errors = Interface::CLI::Errors::Presenter.new(stdout: stdout)
           end
 
           def call
@@ -19,9 +21,32 @@ module Csvtool
             left_path = file_path_prompt.call(label: "Left CSV file path: ")
             right_path = file_path_prompt.call(label: "Right CSV file path: ")
 
-            @use_case.call(left_path: left_path, right_path: right_path)
-            @stdout.puts "Parity validation workflow shell complete."
+            result = @use_case.call(left_path: left_path, right_path: right_path)
+            return handle_error(result) unless result.ok?
+
+            print_summary(result.data)
             nil
+          end
+
+          private
+
+          def print_summary(data)
+            @stdout.puts(data[:match] ? "MATCH" : "MISMATCH")
+            @stdout.puts "Summary: left_rows=#{data[:left_rows]} right_rows=#{data[:right_rows]} " \
+                         "left_only=#{data[:left_only_count]} right_only=#{data[:right_only_count]}"
+          end
+
+          def handle_error(result)
+            case result.error
+            when :file_not_found
+              @errors.file_not_found(result.data[:path])
+            when :could_not_parse_csv
+              @errors.could_not_parse_csv
+            when :cannot_read_file
+              @errors.cannot_read_file(result.data[:path])
+            else
+              @stdout.puts "Unexpected parity validation failure."
+            end
           end
         end
       end

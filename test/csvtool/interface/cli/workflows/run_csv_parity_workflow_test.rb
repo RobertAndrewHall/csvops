@@ -13,7 +13,13 @@ class RunCsvParityWorkflowTest < Minitest::Test
 
     def call(left_path:, right_path:)
       @calls << { left_path: left_path, right_path: right_path }
-      Struct.new(:ok?).new(true)
+      Struct.new(:ok?, :data).new(true, {
+        match: true,
+        left_rows: 3,
+        right_rows: 3,
+        left_only_count: 0,
+        right_only_count: 0
+      })
     end
   end
 
@@ -29,6 +35,7 @@ class RunCsvParityWorkflowTest < Minitest::Test
     assert_equal [{ left_path: "/tmp/left.csv", right_path: "/tmp/right.csv" }], use_case.calls
     assert_includes stdout.string, "Left CSV file path: "
     assert_includes stdout.string, "Right CSV file path: "
-    assert_includes stdout.string, "Parity validation workflow shell complete."
+    assert_includes stdout.string, "MATCH"
+    assert_includes stdout.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
   end
 end

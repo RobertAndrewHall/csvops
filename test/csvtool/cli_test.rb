@@ -394,7 +394,7 @@ class TestCli < Minitest::Test
     assert_includes output.string, "Summary: source_rows=5 removed_rows=3 kept_rows=2"
   end
 
-  def test_parity_workflow_shell_prompts_and_returns_to_menu
+  def test_parity_workflow_reports_match_and_returns_to_menu
     output = StringIO.new
     input = [
       "5",
@@ -408,7 +408,8 @@ class TestCli < Minitest::Test
     assert_equal 0, status
     assert_includes output.string, "Left CSV file path:"
     assert_includes output.string, "Right CSV file path:"
-    assert_includes output.string, "Parity validation workflow shell complete."
+    assert_includes output.string, "MATCH"
+    assert_includes output.string, "Summary: left_rows=3 right_rows=3 left_only=0 right_only=0"
     assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
   end
 
