@@ -130,4 +130,47 @@ class RunCsvSplitWorkflowTest < Minitest::Test
       assert_equal "sentinel\n", File.read(existing)
     end
   end
+
+  def test_workflow_reports_missing_file
+    out = StringIO.new
+    input = ["/tmp/does-not-exist.csv", "", "", "10", "", "", ""].join("\n") + "\n"
+
+    Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
+      stdin: StringIO.new(input),
+      stdout: out
+    ).call
+
+    assert_includes out.string, "File not found: /tmp/does-not-exist.csv"
+  end
+
+  def test_workflow_rejects_invalid_chunk_size
+    out = StringIO.new
+    input = [fixture_path("sample_people.csv"), "", "", "abc"].join("\n") + "\n"
+
+    Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
+      stdin: StringIO.new(input),
+      stdout: out
+    ).call
+
+    assert_includes out.string, "Chunk size must be a positive integer."
+  end
+
+  def test_workflow_creates_output_directory_when_missing
+    out = StringIO.new
+
+    Dir.mktmpdir do |dir|
+      source_path = File.join(dir, "people.csv")
+      output_dir = File.join(dir, "chunks")
+      FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
+      input = [source_path, "", "", "10", output_dir, "people", ""].join("\n") + "\n"
+
+      Csvtool::Interface::CLI::Workflows::RunCsvSplitWorkflow.new(
+        stdin: StringIO.new(input),
+        stdout: out
+      ).call
+
+      assert Dir.exist?(output_dir)
+      assert File.file?(File.join(output_dir, "people_part_001.csv"))
+    end
+  end
 end

@@ -69,4 +69,28 @@ class RunCsvSplitTest < Minitest::Test
       assert_equal File.join(dir, "people_part_001.csv"), result.data[:path]
     end
   end
+
+  def test_creates_output_directory_when_it_does_not_exist
+    use_case = Csvtool::Application::UseCases::RunCsvSplit.new
+
+    Dir.mktmpdir do |dir|
+      source_path = File.join(dir, "people.csv")
+      output_dir = File.join(dir, "new_chunks")
+      FileUtils.cp(fixture_path("split_people_25.csv"), source_path)
+
+      source = Csvtool::Domain::CsvSplitSession::SplitSource.new(path: source_path, separator: ",", headers_present: true)
+      options = Csvtool::Domain::CsvSplitSession::SplitOptions.new(
+        chunk_size: 10,
+        output_directory: output_dir,
+        file_prefix: "batch"
+      )
+      session = Csvtool::Domain::CsvSplitSession::SplitSession.start(source: source, options: options)
+
+      result = use_case.call(session: session)
+
+      assert result.ok?
+      assert Dir.exist?(output_dir)
+      assert File.file?(File.join(output_dir, "batch_part_001.csv"))
+    end
+  end
 end

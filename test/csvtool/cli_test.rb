@@ -44,6 +44,24 @@ class TestCli < Minitest::Test
     end
   end
 
+  def test_split_workflow_invalid_chunk_size_returns_to_menu
+    output = StringIO.new
+    input = [
+      "6",
+      fixture_path("sample_people.csv"),
+      "",
+      "",
+      "0",
+      "7"
+    ].join("\n") + "\n"
+
+    status = Csvtool::CLI.start(["menu"], stdin: StringIO.new(input), stdout: output, stderr: StringIO.new)
+
+    assert_equal 0, status
+    assert_includes output.string, "Chunk size must be a positive integer."
+    assert_operator output.string.scan("CSV Tool Menu").length, :>=, 2
+  end
+
   def test_end_to_end_console_happy_path_prints_expected_values
     input = [
       "1",

@@ -57,6 +57,10 @@ module Csvtool
             @stdout.puts "Seed must be an integer."
           end
 
+          def invalid_chunk_size
+            @stdout.puts "Chunk size must be a positive integer."
+          end
+
           def canceled
             @stdout.puts "Canceled."
           end

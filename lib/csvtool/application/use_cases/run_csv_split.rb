@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "csv"
+require "fileutils"
 require "csvtool/infrastructure/csv/header_reader"
 require "csvtool/infrastructure/csv/csv_splitter"
 
@@ -40,6 +41,7 @@ module Csvtool
           source = session.source
           output_directory = session.options.output_directory || File.dirname(source.path)
           file_prefix = session.options.file_prefix || File.basename(source.path, ".*")
+          FileUtils.mkdir_p(output_directory)
 
           stats = @csv_splitter.call(
             file_path: source.path,

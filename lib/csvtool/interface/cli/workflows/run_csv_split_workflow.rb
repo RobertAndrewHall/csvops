@@ -44,7 +44,8 @@ module Csvtool
                 file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
                 separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
                 headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout),
-                chunk_size_prompt: Interface::CLI::Prompts::ChunkSizePrompt.new(stdin: @stdin, stdout: @stdout)
+                chunk_size_prompt: Interface::CLI::Prompts::ChunkSizePrompt.new(stdin: @stdin, stdout: @stdout),
+                errors: @errors
               ),
               Steps::CsvSplit::CollectOutputStep.new(
                 split_output_prompt: Interface::CLI::Prompts::SplitOutputPrompt.new(
