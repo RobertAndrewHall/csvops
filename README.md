@@ -146,7 +146,7 @@ The codebase follows a DDD-lite layered structure:
 - `domain/`: core domain models and invariants (`ColumnSession`, `RowSession`, `RandomizationSession`, and `CrossCsvDedupeSession` aggregates + supporting entities/value objects).
 - `application/`: use-case orchestration (`RunExtraction`, `RunRowExtraction`, `RunRowRandomization`, `RunCrossCsvDedupe`).
 - `infrastructure/`: CSV reading/streaming and output adapters (console/file), plus cross-CSV dedupe adapter.
-- `interface/cli/`: menu, prompts, and user-facing error presentation.
+- `interface/cli/`: menu, prompts, workflows, and user-facing error presentation.
 - `Csvtool::CLI`: entrypoint wiring from command args to interface/application flow.
 
 ## Domain model
@@ -186,6 +186,7 @@ Bounded contexts: `Column Extraction`, `Row Extraction`, `Row Randomization`, an
   - `Infrastructure::Output::CsvFileWriter`
 - Interface adapters:
   - `Interface::CLI::MenuLoop`
+  - `Interface::CLI::Workflows::RunCrossCsvDedupeWorkflow`
   - `Interface::CLI::Prompts::*`
   - `Interface::CLI::Errors::Presenter`
 
@@ -295,7 +296,8 @@ Core DDD structure:
 
 ```mermaid
 flowchart LR
-  UI4["Interface CLI\n(Menu + Prompts + Errors)"] --> APP4["Application Use Case\nRunCrossCsvDedupe"]
+  UI4["Interface CLI\n(Menu + Prompts + Errors)"] --> WF4["CLI Workflow\nRunCrossCsvDedupeWorkflow"]
+  WF4 --> APP4["Application Use Case\nRunCrossCsvDedupe"]
   APP4 --> AGG4["Domain Aggregate\nCrossCsvDedupeSession"]
 
   AGG4 --> E5["Entities\nCsvProfile(source/reference) + KeyMapping"]
@@ -320,6 +322,7 @@ lib/csvtool/infrastructure/csv/*
 lib/csvtool/infrastructure/output/*
 lib/csvtool/domain/shared/output_destination.rb
 lib/csvtool/interface/cli/menu_loop.rb
+lib/csvtool/interface/cli/workflows/*
 lib/csvtool/interface/cli/prompts/*
 lib/csvtool/interface/cli/errors/presenter.rb
 test/csvtool/cli_test.rb         # end-to-end workflow tests
