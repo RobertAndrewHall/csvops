@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["Robert Hall"]
   spec.email = [""]
 
-  spec.summary = "Interactive CSV column extraction CLI"
-  spec.description = "A small Ruby CLI for extracting CSV columns interactively or via direct command."
+  spec.summary = "Ruby CLI for practical CSV data workflows"
+  spec.description = "A Ruby CLI for guided CSV workflows and direct commands including extraction, randomization, splitting, parity checks, deduplication, and stats."
   spec.homepage = "https://github.com/RobertAndrewHall/csvops"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.3"
