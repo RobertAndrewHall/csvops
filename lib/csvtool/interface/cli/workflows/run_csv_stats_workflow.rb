@@ -3,6 +3,8 @@
 require "csvtool/application/use_cases/run_csv_stats"
 require "csvtool/interface/cli/errors/presenter"
 require "csvtool/interface/cli/prompts/file_path_prompt"
+require "csvtool/interface/cli/prompts/separator_prompt"
+require "csvtool/interface/cli/prompts/headers_present_prompt"
 require "csvtool/interface/cli/workflows/builders/csv_stats_session_builder"
 require "csvtool/interface/cli/workflows/presenters/csv_stats_presenter"
 require "csvtool/interface/cli/workflows/support/result_error_handler"
@@ -35,7 +37,9 @@ module Csvtool
             }
             pipeline = Steps::WorkflowStepPipeline.new(steps: [
               Steps::CsvStats::CollectInputsStep.new(
-                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout)
+                file_path_prompt: Interface::CLI::Prompts::FilePathPrompt.new(stdin: @stdin, stdout: @stdout),
+                separator_prompt: Interface::CLI::Prompts::SeparatorPrompt.new(stdin: @stdin, stdout: @stdout, errors: @errors),
+                headers_present_prompt: Interface::CLI::Prompts::HeadersPresentPrompt.new(stdin: @stdin, stdout: @stdout)
               ),
               Steps::CsvStats::BuildSessionStep.new,
               Steps::CsvStats::ExecuteStep.new

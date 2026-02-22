@@ -22,6 +22,8 @@ class TestCli < Minitest::Test
     input = [
       "7",
       fixture_path("sample_people.csv"),
+      "",
+      "",
       "8"
     ].join("\n") + "\n"
 
